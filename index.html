@@ -571,7 +571,7 @@
         (w === EGYPT ? scoreEgypt : scoreHindu).textContent = scores[w];
         statusEl.className   = `status-text ${w}-msg`;
         statusEl.textContent  = w === EGYPT
-          ? '🏆 Egypt Triumphs! The Pharaoh's Ankh prevails! ☥'
+          ? '🏆 Egypt Triumphs! The Pharaoh\u2019s Ankh prevails! \u2625'
           : '🏆 India Triumphs! The Divine Om is victorious! ॐ';
         cardEgypt.classList.toggle('active-turn', w === EGYPT);
         cardHindu.classList.toggle('active-turn', w === HINDU);

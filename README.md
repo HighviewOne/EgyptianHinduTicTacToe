@@ -4,6 +4,8 @@
 
 🎮 **[Play it live](https://highviewone.github.io/EgyptianHinduTicTacToe/)**
 
+![Game screenshot](screenshot.png)
+
 ---
 
 ## Players
