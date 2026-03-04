@@ -367,6 +367,19 @@
     }
     .btn-reset-score:hover { background: rgba(255,255,255,.12); color: rgba(255,255,255,.8); }
 
+    .btn-music {
+      background: rgba(255,255,255,.07);
+      color: rgba(255,255,255,.55);
+      border: 1px solid rgba(255,255,255,.12);
+    }
+    .btn-music:hover  { background: rgba(255,255,255,.12); color: rgba(255,255,255,.8); }
+    .btn-music.on {
+      background: linear-gradient(135deg, rgba(212,160,23,.25), rgba(255,107,53,.2));
+      color: var(--egypt-sand);
+      border-color: rgba(212,160,23,.4);
+      box-shadow: 0 0 14px rgba(212,160,23,.2);
+    }
+
     /* ── draws row ── */
     .draws-row {
       font-size: .72rem;
@@ -408,8 +421,8 @@
       .cell  { border-radius: 10px; }
 
       /* Bigger tap targets for buttons */
-      .controls { gap: 10px; width: 100%; }
-      .btn { padding: 15px 20px; font-size: .78rem; flex: 1; }
+      .controls { gap: 10px; width: 100%; flex-wrap: wrap; }
+      .btn { padding: 15px 20px; font-size: .78rem; flex: 1; min-width: 120px; }
 
       /* Corners smaller */
       .corner { font-size: 2rem; }
@@ -481,6 +494,7 @@
   <!-- controls -->
   <div class="controls">
     <button class="btn btn-restart" id="btn-restart">New Round</button>
+    <button class="btn btn-music" id="btn-music">🎵 Music</button>
     <button class="btn btn-reset-score" id="btn-reset">Reset Scores</button>
   </div>
 
@@ -548,6 +562,102 @@
     [440, 370, 330].forEach((f, i) => {
       note(f, 'sine', 0.2, 0.01, 0.4, i * 0.15);
     });
+  }
+
+  /* ─────────────────────────────────────────────
+     Background Music
+     Bhairav raga — shared between Egyptian &
+     Hindu classical traditions (A root, ~60 BPM)
+  ───────────────────────────────────────────── */
+  let musicPlaying = false;
+  let droneNodes   = null;
+  let melodyTimer  = null;
+  let melodyStep   = 0;
+
+  // Bhairav / Byzantine scale on A (Hz): A Bb C# D E F G# A B
+  const SCALE_HZ = [110, 116.54, 138.59, 146.83, 164.81, 174.61, 207.65, 220, 246.94];
+  // Melody pattern (scale indices; -1 = rest)
+  const PATTERN  = [4,3,2,4, 6,4,3,2, 1,0,2,3, -1, 6,7,6,4, 3,4,-1, 2,0,-1, 4,2,0,-1];
+  const STEP_MS  = 560; // ms per melody step
+
+  function startDrone() {
+    const ctx = getCtx();
+    const out = ctx.createGain();
+    out.gain.setValueAtTime(0, ctx.currentTime);
+    out.gain.linearRampToValueAtTime(1, ctx.currentTime + 2.5);
+    out.connect(ctx.destination);
+
+    // Root + perfect 5th + octave + 2nd octave — classic tanpura-style drone
+    const layers = [
+      { freq: 55,     vol: 0.22 },
+      { freq: 82.41,  vol: 0.13 },
+      { freq: 110,    vol: 0.10 },
+      { freq: 164.81, vol: 0.06 },
+    ];
+    const oscs = layers.map(({ freq, vol }) => {
+      const osc = ctx.createOscillator();
+      const g   = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, ctx.currentTime);
+      osc.detune.setValueAtTime((Math.random() - 0.5) * 8, ctx.currentTime);
+      g.gain.setValueAtTime(vol, ctx.currentTime);
+      osc.connect(g);
+      g.connect(out);
+      osc.start();
+      return osc;
+    });
+
+    // Slow LFO for gentle swelling tremolo
+    const lfo  = ctx.createOscillator();
+    const lfoG = ctx.createGain();
+    lfo.frequency.setValueAtTime(0.11, ctx.currentTime);
+    lfoG.gain.setValueAtTime(0.055, ctx.currentTime);
+    lfo.connect(lfoG);
+    lfoG.connect(out.gain);
+    lfo.start();
+
+    return { oscs, lfo, out };
+  }
+
+  function stopDrone() {
+    if (!droneNodes) return;
+    const ctx   = getCtx();
+    const nodes = droneNodes;
+    droneNodes  = null;
+    nodes.out.gain.linearRampToValueAtTime(0, ctx.currentTime + 1.8);
+    setTimeout(() => {
+      nodes.oscs.forEach(o => { try { o.stop(); } catch (_) {} });
+      try { nodes.lfo.stop(); } catch (_) {}
+    }, 1900);
+  }
+
+  function tickMelody() {
+    if (!musicPlaying) return;
+    const idx = PATTERN[melodyStep % PATTERN.length];
+    melodyStep++;
+    if (idx >= 0) {
+      const hz = SCALE_HZ[idx];
+      note(hz,     'sine', 0.10, 0.04, 0.48);          // melody note
+      note(hz * 2, 'sine', 0.04, 0.04, 0.38);          // octave shimmer
+      note(hz,     'sine', 0.04, 0.04, 0.38, 0.40);    // gentle echo
+    }
+    melodyTimer = setTimeout(tickMelody, STEP_MS);
+  }
+
+  function toggleMusic() {
+    musicPlaying = !musicPlaying;
+    const btn = document.getElementById('btn-music');
+    if (musicPlaying) {
+      droneNodes = startDrone();
+      tickMelody();
+      btn.textContent = '🔇 Mute';
+      btn.classList.add('on');
+    } else {
+      clearTimeout(melodyTimer);
+      stopDrone();
+      btn.textContent = '🎵 Music';
+      btn.classList.remove('on');
+    }
   }
 
   /* ─────────────────────────────────────────────
@@ -715,6 +825,7 @@
   ───────────────────────────────────────────── */
   document.getElementById('btn-restart').addEventListener('click', newRound);
   document.getElementById('btn-reset').addEventListener('click', resetScores);
+  document.getElementById('btn-music').addEventListener('click', toggleMusic);
 
   /* ─────────────────────────────────────────────
      Init
