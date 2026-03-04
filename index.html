@@ -380,6 +380,40 @@
       box-shadow: 0 0 14px rgba(212,160,23,.2);
     }
 
+    /* ── mode selector ── */
+    .mode-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .mode-btn {
+      font-family: 'Cinzel', serif;
+      font-size: .68rem;
+      font-weight: 600;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      border: 1px solid rgba(255,255,255,.13);
+      border-radius: 30px;
+      padding: 8px 16px;
+      cursor: pointer;
+      background: rgba(255,255,255,.05);
+      color: rgba(255,255,255,.4);
+      transition: all .2s;
+    }
+    .mode-btn:hover  { background: rgba(255,255,255,.1); color: rgba(255,255,255,.7); }
+    .mode-btn.active {
+      background: linear-gradient(135deg, rgba(212,160,23,.22), rgba(255,107,53,.18));
+      color: var(--egypt-sand);
+      border-color: rgba(212,160,23,.45);
+      box-shadow: 0 0 12px rgba(212,160,23,.18);
+    }
+
+    /* board locked while AI thinks */
+    .board.ai-thinking { pointer-events: none; opacity: .75; }
+    .board.ai-thinking .cell:not(.taken) { animation: aiPulse 1s ease-in-out infinite; }
+    @keyframes aiPulse { 0%,100%{opacity:.4} 50%{opacity:.7} }
+
     /* ── draws row ── */
     .draws-row {
       font-size: .72rem;
@@ -476,6 +510,13 @@
       <div class="player-score" id="score-hindu">0</div>
       <div class="score-label">VICTORIES</div>
     </div>
+  </div>
+
+  <!-- mode selector -->
+  <div class="mode-row">
+    <button class="mode-btn active" id="mode-2p">2 Players</button>
+    <button class="mode-btn" id="mode-easy">vs AI — Easy</button>
+    <button class="mode-btn" id="mode-hard">vs AI — Hard</button>
   </div>
 
   <!-- status -->
@@ -661,6 +702,89 @@
   }
 
   /* ─────────────────────────────────────────────
+     AI — minimax with alpha-beta pruning
+  ───────────────────────────────────────────── */
+  let aiMode     = null;   // null | 'easy' | 'hard'
+  let aiThinking = false;
+
+  function boardWinner(b) {
+    for (const [a, x, c] of WIN_LINES) {
+      if (b[a] && b[a] === b[x] && b[a] === b[c]) return b[a];
+    }
+    return null;
+  }
+
+  function minimax(b, isMax, alpha, beta) {
+    const w = boardWinner(b);
+    if (w === HINDU) return  10;
+    if (w === EGYPT) return -10;
+    if (b.every(v => v))    return 0;
+
+    if (isMax) {
+      let best = -Infinity;
+      for (let i = 0; i < 9; i++) {
+        if (b[i]) continue;
+        b[i] = HINDU;
+        best  = Math.max(best, minimax(b, false, alpha, beta));
+        b[i]  = null;
+        alpha = Math.max(alpha, best);
+        if (beta <= alpha) break;
+      }
+      return best;
+    } else {
+      let best = Infinity;
+      for (let i = 0; i < 9; i++) {
+        if (b[i]) continue;
+        b[i] = EGYPT;
+        best  = Math.min(best, minimax(b, true, alpha, beta));
+        b[i]  = null;
+        beta  = Math.min(beta, best);
+        if (beta <= alpha) break;
+      }
+      return best;
+    }
+  }
+
+  function getBestMove(b) {
+    const empty = b.reduce((a, v, i) => (v ? a : [...a, i]), []);
+    if (aiMode === 'easy') return empty[Math.floor(Math.random() * empty.length)];
+    let best = -Infinity, move = empty[0];
+    for (const i of empty) {
+      b[i]      = HINDU;
+      const val = minimax(b, false, -Infinity, Infinity);
+      b[i]      = null;
+      if (val > best) { best = val; move = i; }
+    }
+    return move;
+  }
+
+  function scheduleAI() {
+    if (!aiMode || current !== HINDU || gameOver) return;
+    aiThinking = true;
+    boardEl.classList.add('ai-thinking');
+    const delay = aiMode === 'easy' ? 400 + Math.random() * 400
+                                    : 500 + Math.random() * 300;
+    setTimeout(() => {
+      if (!aiThinking) return;
+      aiThinking = false;
+      boardEl.classList.remove('ai-thinking');
+      handleClick(getBestMove([...board]));
+    }, delay);
+  }
+
+  function setMode(mode) {
+    aiMode = mode;
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(mode ? `mode-${mode}` : 'mode-2p').classList.add('active');
+    // Update India card subtitle
+    document.querySelector('#card-hindu .player-title').textContent =
+      mode ? (mode === 'hard' ? 'Ancient AI' : 'Easy AI') : 'Divine Om';
+    aiThinking = false;
+    boardEl.classList.remove('ai-thinking');
+    resetScores();
+  }
+
+  /* ─────────────────────────────────────────────
      Game state
   ───────────────────────────────────────────── */
   const EGYPT = 'egypt';
@@ -753,7 +877,9 @@
      Handle cell click
   ───────────────────────────────────────────── */
   function handleClick(i) {
-    if (gameOver || board[i]) return;
+    if (gameOver || board[i] || aiThinking) return;
+    // Block human from clicking during AI's turn
+    if (aiMode && current === HINDU) return;
     board[i] = current;
     const result = checkWinner();
 
@@ -791,6 +917,7 @@
       statusEl.textContent = LABELS[current];
       setAura(current);
       updateTurnUI();
+      scheduleAI();
     }
   }
 
@@ -807,6 +934,7 @@
     setAura(current);
     renderBoard();
     updateTurnUI();
+    scheduleAI();
   }
 
   /* ─────────────────────────────────────────────
@@ -826,6 +954,9 @@
   document.getElementById('btn-restart').addEventListener('click', newRound);
   document.getElementById('btn-reset').addEventListener('click', resetScores);
   document.getElementById('btn-music').addEventListener('click', toggleMusic);
+  document.getElementById('mode-2p').addEventListener('click',   () => setMode(null));
+  document.getElementById('mode-easy').addEventListener('click', () => setMode('easy'));
+  document.getElementById('mode-hard').addEventListener('click', () => setMode('hard'));
 
   /* ─────────────────────────────────────────────
      Init
