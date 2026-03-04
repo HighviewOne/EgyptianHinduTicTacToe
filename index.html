@@ -496,6 +496,61 @@
 
 <script>
   /* ─────────────────────────────────────────────
+     Audio (Web Audio API — no files needed)
+  ───────────────────────────────────────────── */
+  let audioCtx = null;
+  function getCtx() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtx;
+  }
+
+  // Generic helper: schedule a single oscillator note
+  function note(freq, type, gainPeak, attackT, decayT, startOffset = 0) {
+    const ctx  = getCtx();
+    const t    = ctx.currentTime + startOffset;
+    const osc  = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type      = type;
+    osc.frequency.setValueAtTime(freq, t);
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(gainPeak, t + attackT);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + attackT + decayT);
+    osc.start(t);
+    osc.stop(t + attackT + decayT);
+  }
+
+  // Egypt piece — deep stone thud with a golden overtone
+  function sfxEgypt() {
+    note(110,  'sine',     0.5,  0.01, 0.6);   // deep fundamental
+    note(220,  'sine',     0.18, 0.01, 0.35);  // octave shimmer
+    note(330,  'triangle', 0.08, 0.01, 0.2);   // subtle third
+  }
+
+  // Hindu piece — bright temple-bell shimmer
+  function sfxHindu() {
+    note(660,  'sine',     0.35, 0.005, 0.9);  // bell fundamental
+    note(1320, 'sine',     0.15, 0.005, 0.55); // octave ring
+    note(1980, 'sine',     0.07, 0.005, 0.3);  // bright overtone
+  }
+
+  // Win — short ascending fanfare
+  function sfxWin(player) {
+    const base = player === 'egypt' ? 220 : 330;
+    [1, 1.25, 1.5, 2].forEach((mul, i) => {
+      note(base * mul, 'sine', 0.3, 0.01, 0.35, i * 0.13);
+    });
+  }
+
+  // Draw — gentle descending resolution
+  function sfxDraw() {
+    [440, 370, 330].forEach((f, i) => {
+      note(f, 'sine', 0.2, 0.01, 0.4, i * 0.15);
+    });
+  }
+
+  /* ─────────────────────────────────────────────
      Game state
   ───────────────────────────────────────────── */
   const EGYPT = 'egypt';
@@ -597,6 +652,7 @@
       renderBoard(result.cells);
 
       if (result.winner === 'draw') {
+        sfxDraw();
         scores.draws++;
         drawsEl.textContent = scores.draws;
         statusEl.className  = 'status-text draw-msg';
@@ -606,6 +662,7 @@
         setAura(null);
       } else {
         const w = result.winner;
+        sfxWin(w);
         scores[w]++;
         (w === EGYPT ? scoreEgypt : scoreHindu).textContent = scores[w];
         statusEl.className   = `status-text ${w}-msg`;
@@ -617,6 +674,7 @@
         setAura(w, true);
       }
     } else {
+      current === EGYPT ? sfxEgypt() : sfxHindu();
       renderBoard();
       current = current === EGYPT ? HINDU : EGYPT;
       statusEl.className  = `status-text ${current}-msg`;
