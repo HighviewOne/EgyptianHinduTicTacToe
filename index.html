@@ -218,12 +218,16 @@
     .status {
       text-align: center;
       min-height: 40px;
+      padding: 0 12px;
+      width: 100%;
+      max-width: 500px;
     }
     .status-text {
       font-family: 'Cinzel Decorative', serif;
-      font-size: clamp(.85rem, 2.5vw, 1.15rem);
+      font-size: clamp(.82rem, 3.5vw, 1.15rem);
       letter-spacing: .05em;
       transition: opacity .3s;
+      line-height: 1.4;
     }
     .status-text.egypt-msg  { color: var(--egypt-gold); }
     .status-text.hindu-msg  { color: var(--hindu-saffron); }
@@ -232,6 +236,7 @@
     /* ── board ── */
     .board-wrapper {
       position: relative;
+      width: min(calc(100vw - 32px), 430px);
     }
 
     /* decorative aura behind the board */
@@ -253,18 +258,19 @@
       background: rgba(255,255,255,.03);
       border: 1px solid rgba(255,255,255,.08);
       backdrop-filter: blur(6px);
+      width: 100%;
     }
 
     .cell {
-      width: clamp(90px, 22vw, 130px);
-      height: clamp(90px, 22vw, 130px);
+      aspect-ratio: 1;
+      width: 100%;
       border-radius: 14px;
       background: var(--cell-bg);
       border: 1px solid rgba(255,255,255,.08);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: clamp(2.8rem, 8vw, 4.5rem);
+      font-size: clamp(2rem, 10vw, 4.5rem);
       cursor: pointer;
       transition: background .2s, transform .15s, box-shadow .2s;
       position: relative;
@@ -380,9 +386,42 @@
     }
 
     /* ── responsive tweaks ── */
-    @media (max-width: 480px) {
-      .players { gap: 10px; }
-      .player-card { padding: 14px 18px; min-width: 130px; }
+    @media (max-width: 540px) {
+      .page { padding: 16px 12px 32px; gap: 16px; }
+
+      /* Compact player cards, always side-by-side */
+      .players { gap: 8px; flex-wrap: nowrap; width: 100%; }
+      .player-card {
+        padding: 12px 10px;
+        min-width: 0;
+        flex: 1;
+      }
+      .player-symbol { font-size: 2.2rem; }
+      .player-name   { font-size: .72rem; }
+      .player-title  { font-size: .56rem; letter-spacing: .1em; }
+      .player-score  { font-size: 1.3rem; margin-top: 6px; }
+      .score-label   { font-size: .52rem; }
+      .vs-badge      { width: 34px; height: 34px; font-size: .72rem; flex-shrink: 0; }
+
+      /* Board gap & padding tighter */
+      .board { gap: 8px; padding: 10px; border-radius: 14px; }
+      .cell  { border-radius: 10px; }
+
+      /* Bigger tap targets for buttons */
+      .controls { gap: 10px; width: 100%; }
+      .btn { padding: 15px 20px; font-size: .78rem; flex: 1; }
+
+      /* Corners smaller */
+      .corner { font-size: 2rem; }
+
+      /* Footer */
+      .footer-symbols { gap: 14px; font-size: 1.1rem; }
+    }
+
+    @media (max-width: 360px) {
+      .corner { display: none; }
+      .player-title { display: none; }
+      .title-line2  { letter-spacing: .2em; }
     }
   </style>
 </head>
