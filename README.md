@@ -3,6 +3,7 @@
 > **Battle of the Ancient Realms** — a themed Tic-Tac-Toe game played between an Egyptian Pharaoh and a Hindu deity.
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-Play%20Now-D4A017?style=for-the-badge&logo=github&logoColor=white)](https://highviewone.github.io/EgyptianHinduTicTacToe/)
+[![CI](https://github.com/HighviewOne/EgyptianHinduTicTacToe/actions/workflows/ci.yml/badge.svg)](https://github.com/HighviewOne/EgyptianHinduTicTacToe/actions/workflows/ci.yml)
 
 ![Gameplay demo](demo.gif)
 
