@@ -27,7 +27,8 @@
 - AI opponent with Easy (random) and Hard (minimax) difficulty modes
 - Procedural sound effects and Bhairav raga background music via Web Audio API
 - Fully responsive — works on desktop and mobile
-- No dependencies or build step
+- No dependencies or build step required to play
+- Jest test suite covering all win lines, draw detection, and turn logic
 
 ---
 
@@ -96,6 +97,21 @@ open index.html   # macOS
 
 No server or install needed — just open `index.html` in any browser.
 
+## Running tests
+
+```bash
+npm install
+npm test
+```
+
+29 tests run via Jest, covering:
+
+- All 8 win lines for both players
+- Draw detection (full board, no winner)
+- In-progress state (returns `null`)
+- `getNextPlayer` turn switching
+- `getStartingPlayer` alternation logic
+
 ---
 
 ## Tech
@@ -105,6 +121,9 @@ No server or install needed — just open `index.html` in any browser.
 | Structure | `index.html` — semantic HTML |
 | Styles | `styles.css` — CSS custom properties, grid, keyframe animations |
 | Logic | `script.js` — vanilla JS, Web Audio API, minimax AI |
+| Game logic | `gameLogic.js` — pure functions shared by the browser and tests |
+| Tests | `gameLogic.test.js` — Jest, 29 tests |
+| CI | `.github/workflows/ci.yml` — runs tests on every push |
 
 ---
 
