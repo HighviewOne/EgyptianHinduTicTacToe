@@ -222,24 +222,11 @@ function setMode(mode) {
 
 /* ─────────────────────────────────────────────
    Constants
+   EGYPT, HINDU, WIN_LINES come from gameLogic.js
 ───────────────────────────────────────────── */
-const EGYPT = 'egypt';
-const HINDU = 'hindu';
-
 const SYMBOLS = { egypt: '☥', hindu: 'ॐ' };
 const LABELS  = { egypt: "Egypt's turn — Place the Ankh ☥",
                   hindu: "India's turn — Invoke the Om ॐ" };
-
-// All 8 lines that can win a Tic-Tac-Toe game, expressed as cell indices.
-// The board is a flat 9-element array mapped to a 3×3 grid:
-//   0 | 1 | 2
-//   3 | 4 | 5
-//   6 | 7 | 8
-const WIN_LINES = [
-  [0,1,2],[3,4,5],[6,7,8],   // rows
-  [0,3,6],[1,4,7],[2,5,8],   // columns
-  [0,4,8],[2,4,6],           // diagonals
-];
 
 /* ─────────────────────────────────────────────
    Game state
@@ -323,34 +310,6 @@ function setAura(player, win = false) {
 }
 
 /* ─────────────────────────────────────────────
-   Win detection
-   Checks gameState.board after every move.
-   Returns { winner, cells } on a win or draw,
-   or null if the game should continue.
-───────────────────────────────────────────── */
-function checkWinner() {
-  const { board } = gameState;
-
-  // Test each of the 8 possible winning lines.
-  // A line wins if all three cells are occupied by the same player.
-  // board[a] being truthy ensures the cell isn't empty before comparing.
-  for (const line of WIN_LINES) {
-    const [a, b, c] = line;
-    if (board[a] && board[a] === board[b] && board[a] === board[c]) {
-      // Return the winning player and the three cell indices so the UI
-      // can highlight them with the win-cell animation.
-      return { winner: board[a], cells: line };
-    }
-  }
-
-  // If no winning line exists but every cell is filled, it's a draw.
-  if (board.every(v => v !== null)) return { winner: 'draw', cells: [] };
-
-  // Game is still in progress.
-  return null;
-}
-
-/* ─────────────────────────────────────────────
    Handle cell click
    Central game-loop function — called by both
    human clicks and the AI after its delay.
@@ -366,7 +325,7 @@ function handleClick(i) {
   // Place the current player's piece on the chosen cell.
   gameState.board[i] = currentPlayer;
 
-  const result = checkWinner();
+  const result = checkWinner(gameState.board);
 
   if (result) {
     // ── Game over ───────────────────────────────────────────────────────
