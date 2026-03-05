@@ -141,7 +141,7 @@ function toggleMusic() {
 /* ─────────────────────────────────────────────
    AI — minimax with alpha-beta pruning
 ───────────────────────────────────────────── */
-let aiMode     = null;
+let aiMode     = null;   // null | 'easy' | 'hard'
 let aiThinking = false;
 
 function boardWinner(b) {
@@ -196,7 +196,7 @@ function getBestMove(b) {
 }
 
 function scheduleAI() {
-  if (!aiMode || current !== HINDU || gameOver) return;
+  if (!aiMode || gameState.currentPlayer !== HINDU || gameState.gameOver) return;
   aiThinking = true;
   boardEl.classList.add('ai-thinking');
   const delay = aiMode === 'easy' ? 400 + Math.random() * 400
@@ -205,7 +205,7 @@ function scheduleAI() {
     if (!aiThinking) return;
     aiThinking = false;
     boardEl.classList.remove('ai-thinking');
-    handleClick(getBestMove([...board]));
+    handleClick(getBestMove([...gameState.board]));
   }, delay);
 }
 
@@ -221,7 +221,7 @@ function setMode(mode) {
 }
 
 /* ─────────────────────────────────────────────
-   Game state
+   Constants
 ───────────────────────────────────────────── */
 const EGYPT = 'egypt';
 const HINDU = 'hindu';
@@ -241,14 +241,30 @@ const WIN_LINES = [
   [0,4,8],[2,4,6],           // diagonals
 ];
 
-// board: flat array of 9 cells, each null | 'egypt' | 'hindu'.
-// current: whose turn it is right now.
-// gameOver: true once a winner or draw is found; blocks further moves.
-// scores: persists across rounds for the entire session (reset only by "Reset Scores").
-let board    = Array(9).fill(null);
-let current  = EGYPT;
-let gameOver = false;
-let scores   = { egypt: 0, hindu: 0, draws: 0 };
+/* ─────────────────────────────────────────────
+   Game state
+   Single source of truth for everything that
+   changes during play. Audio and AI flags live
+   separately because they are not game logic.
+
+   gameState.board         — flat 9-cell array, each null | EGYPT | HINDU
+   gameState.currentPlayer — whose turn it is right now
+   gameState.gameOver      — true once a winner/draw is found; blocks moves
+   gameState.scores        — session tally; survives newRound(), cleared only
+                             by resetScores()
+───────────────────────────────────────────── */
+const gameState = {
+  board:         Array(9).fill(null),
+  currentPlayer: EGYPT,
+  gameOver:      false,
+  scores:        { egypt: 0, hindu: 0, draws: 0 },
+};
+
+// Resets only the per-round fields; leaves scores untouched.
+function resetBoard() {
+  gameState.board     = Array(9).fill(null);
+  gameState.gameOver  = false;
+}
 
 /* ─────────────────────────────────────────────
    DOM refs
@@ -267,7 +283,7 @@ const drawsEl    = document.getElementById('draws');
 ───────────────────────────────────────────── */
 function renderBoard(winCells = []) {
   boardEl.innerHTML = '';
-  board.forEach((val, i) => {
+  gameState.board.forEach((val, i) => {
     const cell = document.createElement('div');
     cell.className = 'cell';
     if (val) {
@@ -284,8 +300,9 @@ function renderBoard(winCells = []) {
    Update card highlights
 ───────────────────────────────────────────── */
 function updateTurnUI() {
-  cardEgypt.classList.toggle('active-turn', current === EGYPT && !gameOver);
-  cardHindu.classList.toggle('active-turn', current === HINDU && !gameOver);
+  const { currentPlayer, gameOver } = gameState;
+  cardEgypt.classList.toggle('active-turn', currentPlayer === EGYPT && !gameOver);
+  cardHindu.classList.toggle('active-turn', currentPlayer === HINDU && !gameOver);
 }
 
 /* ─────────────────────────────────────────────
@@ -307,11 +324,13 @@ function setAura(player, win = false) {
 
 /* ─────────────────────────────────────────────
    Win detection
-   Checks the global `board` after every move.
+   Checks gameState.board after every move.
    Returns { winner, cells } on a win or draw,
    or null if the game should continue.
 ───────────────────────────────────────────── */
 function checkWinner() {
+  const { board } = gameState;
+
   // Test each of the 8 possible winning lines.
   // A line wins if all three cells are occupied by the same player.
   // board[a] being truthy ensures the cell isn't empty before comparing.
@@ -337,30 +356,32 @@ function checkWinner() {
    human clicks and the AI after its delay.
 ───────────────────────────────────────────── */
 function handleClick(i) {
+  const { board, currentPlayer, scores } = gameState;
+
   // Guard: ignore clicks on filled cells, after game ends, or while AI thinks.
-  if (gameOver || board[i] || aiThinking) return;
+  if (gameState.gameOver || board[i] || aiThinking) return;
   // In AI mode, prevent the human from playing on India's turn.
-  if (aiMode && current === HINDU) return;
+  if (aiMode && currentPlayer === HINDU) return;
 
   // Place the current player's piece on the chosen cell.
-  board[i] = current;
+  gameState.board[i] = currentPlayer;
 
   const result = checkWinner();
 
   if (result) {
     // ── Game over ───────────────────────────────────────────────────────
     // Lock the board so no further moves can be made this round.
-    gameOver = true;
+    gameState.gameOver = true;
     // Re-render with winning cells highlighted (win-cell CSS animation).
     renderBoard(result.cells);
 
     if (result.winner === 'draw') {
       sfxDraw();
 
-      // Score persistence: increment draws in the shared scores object.
-      // This object survives newRound() and is only cleared by resetScores().
-      scores.draws++;
-      drawsEl.textContent  = scores.draws;
+      // Score persistence: increment draws in gameState.scores.
+      // gameState.scores survives newRound() and is only cleared by resetScores().
+      gameState.scores.draws++;
+      drawsEl.textContent  = gameState.scores.draws;
 
       statusEl.className   = 'status-text draw-msg';
       statusEl.textContent = '⚖️  A sacred draw — The gods are balanced';
@@ -373,10 +394,10 @@ function handleClick(i) {
       sfxWin(w);
 
       // Score persistence: increment the winner's tally.
-      // scores[w] works because w is either 'egypt' or 'hindu',
+      // gameState.scores[w] works because w is either 'egypt' or 'hindu',
       // matching the keys in the scores object exactly.
-      scores[w]++;
-      (w === EGYPT ? scoreEgypt : scoreHindu).textContent = scores[w];
+      gameState.scores[w]++;
+      (w === EGYPT ? scoreEgypt : scoreHindu).textContent = gameState.scores[w];
 
       statusEl.className   = `status-text ${w}-msg`;
       statusEl.textContent = w === EGYPT
@@ -391,14 +412,14 @@ function handleClick(i) {
     // ── Turn switching ──────────────────────────────────────────────────
     // No winner yet — play the placement sound for whoever just moved,
     // then hand the turn to the other player.
-    current === EGYPT ? sfxEgypt() : sfxHindu();
+    currentPlayer === EGYPT ? sfxEgypt() : sfxHindu();
     renderBoard();
 
-    // Flip current between 'egypt' and 'hindu'.
-    current = current === EGYPT ? HINDU : EGYPT;
-    statusEl.className   = `status-text ${current}-msg`;
-    statusEl.textContent = LABELS[current];
-    setAura(current);
+    // Flip currentPlayer between 'egypt' and 'hindu'.
+    gameState.currentPlayer = currentPlayer === EGYPT ? HINDU : EGYPT;
+    statusEl.className   = `status-text ${gameState.currentPlayer}-msg`;
+    statusEl.textContent = LABELS[gameState.currentPlayer];
+    setAura(gameState.currentPlayer);
     updateTurnUI();
 
     // If AI mode is on and it's now India's turn, queue the AI move.
@@ -408,22 +429,23 @@ function handleClick(i) {
 
 /* ─────────────────────────────────────────────
    New round
-   Resets the board and turn, but intentionally
-   preserves scores so the session tally carries
-   over across multiple rounds.
+   Resets the board and turn via resetBoard(),
+   but intentionally preserves scores so the
+   session tally carries over across rounds.
 ───────────────────────────────────────────── */
 function newRound() {
-  board    = Array(9).fill(null);
-  gameOver = false;
+  resetBoard();
 
   // Alternate who goes first each round so neither player is always
   // disadvantaged. The total number of completed games (wins + draws)
   // determines the starter: even total → Egypt, odd total → India.
-  current = (scores.egypt + scores.hindu + scores.draws) % 2 === 0 ? EGYPT : HINDU;
+  const { scores } = gameState;
+  gameState.currentPlayer =
+    (scores.egypt + scores.hindu + scores.draws) % 2 === 0 ? EGYPT : HINDU;
 
-  statusEl.className   = `status-text ${current}-msg`;
-  statusEl.textContent = LABELS[current];
-  setAura(current);
+  statusEl.className   = `status-text ${gameState.currentPlayer}-msg`;
+  statusEl.textContent = LABELS[gameState.currentPlayer];
+  setAura(gameState.currentPlayer);
   renderBoard();
   updateTurnUI();
 
@@ -437,9 +459,9 @@ function newRound() {
    wiped. Calls newRound() to also clear the board.
 ───────────────────────────────────────────── */
 function resetScores() {
-  // Reinitialise the scores object — this is the single source of truth
+  // Reinitialise the scores inside gameState — the single source of truth
   // for the session tally displayed on the player cards.
-  scores = { egypt: 0, hindu: 0, draws: 0 };
+  gameState.scores = { egypt: 0, hindu: 0, draws: 0 };
   scoreEgypt.textContent = 0;
   scoreHindu.textContent = 0;
   drawsEl.textContent    = 0;
