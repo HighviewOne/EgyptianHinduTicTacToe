@@ -1,0 +1,455 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;600;900&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --egypt-gold:   #D4A017;
+  --egypt-sand:   #F2D77E;
+  --egypt-dark:   #1A0A00;
+  --egypt-brown:  #7B4A1E;
+  --egypt-teal:   #1B6E6E;
+  --hindu-orange: #FF6B35;
+  --hindu-saffron:#FF9933;
+  --hindu-purple: #6A0572;
+  --hindu-rose:   #E91E8C;
+  --hindu-green:  #228B22;
+  --bg-dark:      #0D0D0D;
+  --cell-bg:      rgba(255,255,255,0.04);
+  --cell-hover:   rgba(255,255,255,0.09);
+}
+
+html, body {
+  height: 100%;
+  font-family: 'Cinzel', serif;
+  background: var(--bg-dark);
+  color: #eee;
+  overflow-x: hidden;
+}
+
+/* ── animated background ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 20% 20%, rgba(212,160,23,0.12) 0%, transparent 55%),
+    radial-gradient(ellipse at 80% 80%, rgba(105,5,114,0.18) 0%, transparent 55%),
+    radial-gradient(ellipse at 50% 50%, rgba(255,107,53,0.06) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── decorative corner hieroglyphs ── */
+.corner {
+  position: fixed;
+  font-size: 3rem;
+  opacity: 0.13;
+  pointer-events: none;
+  z-index: 0;
+  animation: pulse 4s ease-in-out infinite;
+}
+.corner.tl { top: 12px;  left: 14px; }
+.corner.tr { top: 12px;  right: 14px; animation-delay: 1s; }
+.corner.bl { bottom: 12px; left: 14px; animation-delay: 2s; }
+.corner.br { bottom: 12px; right: 14px; animation-delay: 3s; }
+@keyframes pulse { 0%,100%{opacity:.10} 50%{opacity:.22} }
+
+/* ── layout ── */
+.page {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px 48px;
+  gap: 28px;
+}
+
+/* ── header ── */
+header {
+  text-align: center;
+}
+.title-line1 {
+  font-family: 'Cinzel Decorative', serif;
+  font-size: clamp(1.3rem, 4vw, 2.4rem);
+  font-weight: 900;
+  background: linear-gradient(135deg, var(--egypt-gold) 0%, var(--egypt-sand) 40%, var(--hindu-saffron) 70%, var(--hindu-rose) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: .08em;
+  line-height: 1.2;
+}
+.title-line2 {
+  font-size: clamp(.7rem, 2vw, 1rem);
+  letter-spacing: .35em;
+  color: rgba(255,255,255,.35);
+  margin-top: 6px;
+  text-transform: uppercase;
+}
+.divider {
+  margin: 10px auto 0;
+  width: 220px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--egypt-gold), var(--hindu-saffron), transparent);
+}
+
+/* ── player cards ── */
+.players {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.player-card {
+  position: relative;
+  border-radius: 16px;
+  padding: 18px 28px;
+  min-width: 160px;
+  text-align: center;
+  transition: transform .3s, box-shadow .3s;
+  cursor: default;
+  overflow: hidden;
+}
+.player-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  padding: 2px;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+.player-card.egypt {
+  background: linear-gradient(135deg, rgba(26,10,0,.85) 0%, rgba(123,74,30,.4) 100%);
+  box-shadow: 0 4px 30px rgba(212,160,23,.18);
+}
+.player-card.egypt::before {
+  background: linear-gradient(135deg, var(--egypt-gold), var(--egypt-teal));
+}
+.player-card.hindu {
+  background: linear-gradient(135deg, rgba(106,5,114,.3) 0%, rgba(255,107,53,.15) 100%);
+  box-shadow: 0 4px 30px rgba(255,107,53,.18);
+}
+.player-card.hindu::before {
+  background: linear-gradient(135deg, var(--hindu-saffron), var(--hindu-rose));
+}
+
+.player-card.active-turn {
+  transform: translateY(-4px) scale(1.03);
+}
+.player-card.egypt.active-turn  { box-shadow: 0 8px 40px rgba(212,160,23,.55); }
+.player-card.hindu.active-turn  { box-shadow: 0 8px 40px rgba(255,153,51,.55); }
+
+.player-symbol {
+  font-size: 3.2rem;
+  line-height: 1;
+  filter: drop-shadow(0 0 8px currentColor);
+}
+.player-card.egypt  .player-symbol { color: var(--egypt-gold); }
+.player-card.hindu  .player-symbol { color: var(--hindu-saffron); }
+
+.player-name {
+  font-family: 'Cinzel Decorative', serif;
+  font-size: .78rem;
+  font-weight: 700;
+  margin-top: 6px;
+  letter-spacing: .1em;
+}
+.player-card.egypt  .player-name  { color: var(--egypt-sand); }
+.player-card.hindu  .player-name  { color: var(--hindu-saffron); }
+
+.player-title {
+  font-size: .62rem;
+  letter-spacing: .2em;
+  opacity: .6;
+  margin-top: 2px;
+}
+
+.player-score {
+  margin-top: 10px;
+  font-size: 1.6rem;
+  font-weight: 900;
+}
+.player-card.egypt  .player-score { color: var(--egypt-gold); }
+.player-card.hindu  .player-score { color: var(--hindu-saffron); }
+
+.score-label { font-size: .58rem; letter-spacing: .2em; opacity: .5; }
+
+.turn-crown {
+  position: absolute;
+  top: -6px; left: 50%;
+  transform: translateX(-50%) scale(0);
+  font-size: 1.3rem;
+  transition: transform .3s cubic-bezier(.34,1.56,.64,1);
+}
+.player-card.active-turn .turn-crown { transform: translateX(-50%) scale(1); }
+
+/* VS separator */
+.vs-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  font-size: .85rem;
+  font-weight: 900;
+  letter-spacing: .05em;
+  background: rgba(255,255,255,.07);
+  border: 1px solid rgba(255,255,255,.15);
+  color: rgba(255,255,255,.5);
+  align-self: center;
+  flex-shrink: 0;
+}
+
+/* ── mode selector ── */
+.mode-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.mode-btn {
+  font-family: 'Cinzel', serif;
+  font-size: .68rem;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  border: 1px solid rgba(255,255,255,.13);
+  border-radius: 30px;
+  padding: 8px 16px;
+  cursor: pointer;
+  background: rgba(255,255,255,.05);
+  color: rgba(255,255,255,.4);
+  transition: all .2s;
+}
+.mode-btn:hover  { background: rgba(255,255,255,.1); color: rgba(255,255,255,.7); }
+.mode-btn.active {
+  background: linear-gradient(135deg, rgba(212,160,23,.22), rgba(255,107,53,.18));
+  color: var(--egypt-sand);
+  border-color: rgba(212,160,23,.45);
+  box-shadow: 0 0 12px rgba(212,160,23,.18);
+}
+
+/* ── status bar ── */
+.status {
+  text-align: center;
+  min-height: 40px;
+  padding: 0 12px;
+  width: 100%;
+  max-width: 500px;
+}
+.status-text {
+  font-family: 'Cinzel Decorative', serif;
+  font-size: clamp(.82rem, 3.5vw, 1.15rem);
+  letter-spacing: .05em;
+  transition: opacity .3s;
+  line-height: 1.4;
+}
+.status-text.egypt-msg  { color: var(--egypt-gold); }
+.status-text.hindu-msg  { color: var(--hindu-saffron); }
+.status-text.draw-msg   { color: rgba(255,255,255,.65); }
+
+/* ── board ── */
+.board-wrapper {
+  position: relative;
+  width: min(calc(100vw - 32px), 430px);
+}
+
+.board-aura {
+  position: absolute;
+  inset: -30px;
+  border-radius: 32px;
+  pointer-events: none;
+  z-index: -1;
+  transition: background 1s;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  padding: 16px;
+  border-radius: 20px;
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.08);
+  backdrop-filter: blur(6px);
+  width: 100%;
+}
+
+/* board locked while AI thinks */
+.board.ai-thinking { pointer-events: none; opacity: .75; }
+.board.ai-thinking .cell:not(.taken) { animation: aiPulse 1s ease-in-out infinite; }
+@keyframes aiPulse { 0%,100%{opacity:.4} 50%{opacity:.7} }
+
+.cell {
+  aspect-ratio: 1;
+  width: 100%;
+  border-radius: 14px;
+  background: var(--cell-bg);
+  border: 1px solid rgba(255,255,255,.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(2rem, 10vw, 4.5rem);
+  cursor: pointer;
+  transition: background .2s, transform .15s, box-shadow .2s;
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+}
+.cell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity .2s;
+  border-radius: 14px;
+}
+
+.cell:hover:not(.taken) {
+  background: var(--cell-hover);
+  transform: scale(1.04);
+}
+.cell.taken { cursor: default; }
+
+.cell.egypt-cell {
+  background: rgba(212,160,23,.12);
+  border-color: rgba(212,160,23,.4);
+  box-shadow: 0 0 20px rgba(212,160,23,.2), inset 0 0 10px rgba(212,160,23,.08);
+  animation: placeCell .35s cubic-bezier(.34,1.56,.64,1);
+}
+.cell.egypt-cell::after {
+  background: radial-gradient(circle at center, rgba(212,160,23,.15), transparent 70%);
+  opacity: 1;
+}
+
+.cell.hindu-cell {
+  background: rgba(255,107,53,.12);
+  border-color: rgba(255,153,51,.45);
+  box-shadow: 0 0 20px rgba(255,107,53,.25), inset 0 0 10px rgba(255,107,53,.1);
+  animation: placeCell .35s cubic-bezier(.34,1.56,.64,1);
+}
+.cell.hindu-cell::after {
+  background: radial-gradient(circle at center, rgba(255,153,51,.18), transparent 70%);
+  opacity: 1;
+}
+
+.cell.win-cell {
+  animation: winPulse 1s ease-in-out infinite;
+}
+@keyframes winPulse {
+  0%,100% { transform: scale(1);   }
+  50%      { transform: scale(1.08); }
+}
+
+@keyframes placeCell {
+  from { transform: scale(.4) rotate(-15deg); opacity: 0; }
+  to   { transform: scale(1)  rotate(0deg);  opacity: 1; }
+}
+
+/* ── controls ── */
+.controls {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.btn {
+  font-family: 'Cinzel', serif;
+  font-size: .82rem;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  border: none;
+  border-radius: 40px;
+  padding: 12px 28px;
+  cursor: pointer;
+  transition: transform .2s, box-shadow .2s, filter .2s;
+  position: relative;
+  overflow: hidden;
+}
+.btn:hover  { transform: translateY(-2px); filter: brightness(1.12); }
+.btn:active { transform: translateY(0px);  filter: brightness(.95); }
+
+.btn-restart {
+  background: linear-gradient(135deg, var(--egypt-gold), #A07010);
+  color: var(--egypt-dark);
+  box-shadow: 0 4px 18px rgba(212,160,23,.35);
+}
+.btn-reset-score {
+  background: rgba(255,255,255,.07);
+  color: rgba(255,255,255,.55);
+  border: 1px solid rgba(255,255,255,.12);
+}
+.btn-reset-score:hover { background: rgba(255,255,255,.12); color: rgba(255,255,255,.8); }
+
+.btn-music {
+  background: rgba(255,255,255,.07);
+  color: rgba(255,255,255,.55);
+  border: 1px solid rgba(255,255,255,.12);
+}
+.btn-music:hover  { background: rgba(255,255,255,.12); color: rgba(255,255,255,.8); }
+.btn-music.on {
+  background: linear-gradient(135deg, rgba(212,160,23,.25), rgba(255,107,53,.2));
+  color: var(--egypt-sand);
+  border-color: rgba(212,160,23,.4);
+  box-shadow: 0 0 14px rgba(212,160,23,.2);
+}
+
+/* ── draws row ── */
+.draws-row {
+  font-size: .72rem;
+  letter-spacing: .2em;
+  color: rgba(255,255,255,.3);
+  text-align: center;
+}
+.draws-row span { color: rgba(255,255,255,.55); }
+
+/* ── footer ── */
+.footer-symbols {
+  display: flex;
+  gap: 24px;
+  font-size: 1.5rem;
+  opacity: .18;
+  animation: pulse 6s ease-in-out infinite;
+}
+
+/* ── responsive tweaks ── */
+@media (max-width: 540px) {
+  .page { padding: 16px 12px 32px; gap: 16px; }
+
+  .players { gap: 8px; flex-wrap: nowrap; width: 100%; }
+  .player-card {
+    padding: 12px 10px;
+    min-width: 0;
+    flex: 1;
+  }
+  .player-symbol { font-size: 2.2rem; }
+  .player-name   { font-size: .72rem; }
+  .player-title  { font-size: .56rem; letter-spacing: .1em; }
+  .player-score  { font-size: 1.3rem; margin-top: 6px; }
+  .score-label   { font-size: .52rem; }
+  .vs-badge      { width: 34px; height: 34px; font-size: .72rem; flex-shrink: 0; }
+
+  .board { gap: 8px; padding: 10px; border-radius: 14px; }
+  .cell  { border-radius: 10px; }
+
+  .controls { gap: 10px; width: 100%; flex-wrap: wrap; }
+  .btn { padding: 15px 20px; font-size: .78rem; flex: 1; min-width: 120px; }
+
+  .corner { font-size: 2rem; }
+  .footer-symbols { gap: 14px; font-size: 1.1rem; }
+}
+
+@media (max-width: 360px) {
+  .corner { display: none; }
+  .player-title { display: none; }
+  .title-line2  { letter-spacing: .2em; }
+}
