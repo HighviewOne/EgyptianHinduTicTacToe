@@ -120,6 +120,8 @@
   <div class="controls">
     <button class="btn btn-restart" id="btn-restart">New Round</button>
     <button class="btn btn-undo" id="btn-undo" disabled>↩ Undo</button>
+    <button class="btn btn-hint" id="btn-hint" title="Show best move (H)">💡 Hint</button>
+    <button class="btn btn-replay" id="btn-replay" title="Replay last game" style="display:none">▶ Replay</button>
     <button class="btn btn-music" id="btn-music">🎵 Music</button>
     <button class="btn btn-reset-score" id="btn-reset">Reset Scores</button>
     <button class="btn btn-stats" id="btn-stats">📊 Stats</button>
@@ -204,6 +206,25 @@
       <button class="btn btn-stats-reset" id="btn-stats-reset">Reset Stats</button>
       <button class="btn btn-stats-close" id="btn-stats-close">Close</button>
     </div>
+  </div>
+</div>
+
+<!-- Keyboard shortcut help overlay -->
+<div class="shortcut-help" id="shortcut-help">
+  <div class="shortcut-inner">
+    <div class="shortcut-title">⌨ Keyboard Shortcuts</div>
+    <div class="shortcut-grid">
+      <kbd>1–9</kbd><span>Place piece (reading order)</span>
+      <kbd>Numpad</kbd><span>Place piece (board-intuitive)</span>
+      <kbd>N</kbd><span>New round</span>
+      <kbd>M</kbd><span>Toggle music</span>
+      <kbd>U</kbd><span>Undo last move</span>
+      <kbd>H</kbd><span>Show hint</span>
+      <kbd>F</kbd><span>Fullscreen</span>
+      <kbd>?</kbd><span>This help panel</span>
+      <kbd>Esc</kbd><span>Close overlays</span>
+    </div>
+    <div class="shortcut-close">tap anywhere to close</div>
   </div>
 </div>
 

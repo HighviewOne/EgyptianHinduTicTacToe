@@ -106,8 +106,10 @@ The 📊 Stats button opens a modal showing cumulative games played, draws, per-
 | `N` | New round |
 | `M` | Toggle music |
 | `U` | Undo last move |
+| `H` | Show move hint (pulses best cell for 1.8 s) |
 | `F` | Toggle fullscreen |
-| `Escape` | Close stats / match-victory overlay |
+| `?` | Toggle keyboard shortcut help panel |
+| `Escape` | Close overlays |
 
 ---
 

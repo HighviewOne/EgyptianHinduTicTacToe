@@ -64,6 +64,12 @@ let lastPlacedCell = -1;   // index of most-recently placed piece (drives .fresh
 let matchTarget = 0;   // 0 = free play, 3/5/7 = best-of-N
 
 /* ─────────────────────────────────────────────
+   Move log (board snapshots for replay)
+───────────────────────────────────────────── */
+let gameLog   = [];   // Array of board snapshots after each move
+let replaying = false;
+
+/* ─────────────────────────────────────────────
    All-time stats (localStorage)
 ───────────────────────────────────────────── */
 function loadAllTimeStats() {
@@ -408,6 +414,91 @@ function drawWinLine(cells, winner) {
 function clearWinLine() {
   winLineEl.style.display = 'none';
   winLineEl.classList.remove('animate');
+}
+
+/* ─────────────────────────────────────────────
+   Hint — show optimal cell for current player
+───────────────────────────────────────────── */
+let hintTimer = null;
+
+function getHintMove(b, player) {
+  const empty = b.reduce((a, v, i) => v ? a : [...a, i], []);
+  if (!empty.length) return -1;
+  // HINDU maximises, EGYPT minimises — run full minimax regardless of aiMode
+  if (player === HINDU) {
+    let best = -Infinity, move = empty[0];
+    for (const i of empty) {
+      b[i] = HINDU;
+      const val = minimax(b, false, -Infinity, Infinity);
+      b[i] = null;
+      if (val > best) { best = val; move = i; }
+    }
+    return move;
+  } else {
+    let best = Infinity, move = empty[0];
+    for (const i of empty) {
+      b[i] = EGYPT;
+      const val = minimax(b, true, -Infinity, Infinity);
+      b[i] = null;
+      if (val < best) { best = val; move = i; }
+    }
+    return move;
+  }
+}
+
+function showHint() {
+  if (gameState.gameOver || aiThinking || replaying) return;
+  if (aiMode && gameState.currentPlayer === HINDU) return;
+  clearTimeout(hintTimer);
+  boardEl.querySelectorAll('.cell').forEach(c => c.classList.remove('hint-cell'));
+  const best = getHintMove([...gameState.board], gameState.currentPlayer);
+  if (best < 0) return;
+  const cell = boardEl.querySelectorAll('.cell')[best];
+  if (cell && !cell.classList.contains('taken')) {
+    cell.classList.add('hint-cell');
+    hintTimer = setTimeout(() => cell.classList.remove('hint-cell'), 1800);
+  }
+}
+
+/* ─────────────────────────────────────────────
+   Replay — animate the last game's board states
+───────────────────────────────────────────── */
+function replayGame() {
+  if (!gameLog.length || replaying) return;
+  replaying = true;
+  const btnReplay = document.getElementById('btn-replay');
+  btnReplay.disabled = true;
+
+  const snapshots = [[...Array(9).fill(null)], ...gameLog];  // prepend empty board
+  let step = 0;
+
+  const doStep = () => {
+    if (step >= snapshots.length) {
+      // Restore actual final state
+      renderBoard(gameState.lastWinCells || []);
+      replaying = false;
+      btnReplay.disabled = false;
+      return;
+    }
+    const snap = snapshots[step];
+    // Render this snapshot directly (no event listeners needed during replay)
+    boardEl.innerHTML = '';
+    boardEl.style.setProperty('--hover-sym-display', '""');
+    snap.forEach((val, i) => {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      if (val) {
+        cell.classList.add('taken', `${val}-cell`);
+        cell.textContent = SYMBOLS[val];
+        // Highlight the newly placed piece
+        if (step > 0 && snap[i] !== snapshots[step - 1][i]) cell.classList.add('fresh');
+      }
+      boardEl.appendChild(cell);
+    });
+    step++;
+    setTimeout(doStep, step === 1 ? 300 : 520);
+  };
+  doStep();
 }
 
 /* ─────────────────────────────────────────────
@@ -969,12 +1060,16 @@ function handleClick(i) {
     setTimeout(() => { chaosState.lagActive = false; }, 3000);
   }
 
+  // ── Record board snapshot for replay ─────────────────────────────
+  gameLog.push([...board]);
+
   // ── Check winner (after all chaos mutations) ──────────────────────
   const result = checkWinner(board);
 
   if (result) {
     // ── Game over ─────────────────────────────────────────────────────
     gameState.gameOver = true;
+    gameState.lastWinCells = result.cells || [];
     renderBoard(result.cells);
     boardEl.classList.add('game-over');
     updateBoardColor();
@@ -997,6 +1092,8 @@ function handleClick(i) {
       updateMatchPips();
       updateStreakBadges();
       checkAchievements('draw');
+      document.getElementById('btn-replay').style.display = '';
+      document.getElementById('btn-hint').disabled = true;
     } else {
       const w = result.winner;
       sfxWin(w);
@@ -1038,6 +1135,8 @@ function handleClick(i) {
       updateMatchPips();
       updateStreakBadges();
       checkAchievements(w);
+      document.getElementById('btn-replay').style.display = '';
+      document.getElementById('btn-hint').disabled = true;
       if (matchTarget && gameState.scores[w] >= Math.ceil(matchTarget / 2)) {
         setTimeout(() => showMatchVictory(w), 1200);
       }
@@ -1132,8 +1231,12 @@ function newRound() {
   clearWinLine();
   clearTimer();
   lastPlacedCell = -1;
+  gameLog = [];
+  replaying = false;
   boardEl.classList.remove('game-over');
   updateStreakBadges();
+  document.getElementById('btn-replay').style.display = 'none';
+  document.getElementById('btn-hint').disabled = false;
   boardEl.style.filter = '';
   cosmicAngle = 0;
   initChaosState();       // reset all chaos state for the new round
@@ -1245,6 +1348,12 @@ document.addEventListener('keydown', e => {
   if (e.code === 'Escape') {
     document.getElementById('stats-modal').classList.remove('visible');
     document.getElementById('match-victory').classList.remove('visible');
+    document.getElementById('shortcut-help').classList.remove('visible');
+    return;
+  }
+  // ? opens shortcut help (works even during intro/chaos)
+  if ((e.key === '?' || e.key === '/') && !e.repeat) {
+    document.getElementById('shortcut-help').classList.toggle('visible');
     return;
   }
   if (introShowing || chaosShowing) return;
@@ -1260,6 +1369,8 @@ document.addEventListener('keydown', e => {
     toggleMusic();
   } else if (e.code === 'KeyU' && !e.repeat) {
     undo();
+  } else if (e.code === 'KeyH' && !e.repeat) {
+    showHint();
   } else if (e.code === 'KeyF' && !e.repeat) {
     if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
     else document.exitFullscreen().catch(() => {});
@@ -1328,6 +1439,11 @@ document.querySelectorAll('.match-btn').forEach(btn => {
   });
 });
 
+document.getElementById('btn-hint').addEventListener('click', showHint);
+document.getElementById('btn-replay').addEventListener('click', replayGame);
+document.getElementById('shortcut-help').addEventListener('click', () => {
+  document.getElementById('shortcut-help').classList.remove('visible');
+});
 document.getElementById('btn-stats').addEventListener('click', showStatsModal);
 document.getElementById('btn-share').addEventListener('click', shareResult);
 document.getElementById('btn-stats-close').addEventListener('click', () => {
