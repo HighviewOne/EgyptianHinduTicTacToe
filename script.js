@@ -180,6 +180,47 @@ function trackThemeAchievement(key) {
 }
 
 /* ─────────────────────────────────────────────
+   Streak fire badges
+───────────────────────────────────────────── */
+function updateStreakBadges() {
+  [EGYPT, HINDU].forEach(p => {
+    const badge = document.getElementById(`streak-${p}`);
+    if (!badge) return;
+    const s = gameState.streaks[p];
+    if (s >= 2) {
+      badge.textContent = `🔥 ${s} in a row`;
+      badge.classList.add('visible');
+    } else {
+      badge.classList.remove('visible');
+    }
+  });
+}
+
+/* ─────────────────────────────────────────────
+   Editable player names
+───────────────────────────────────────────── */
+function initEditableNames() {
+  [{ id: 'name-egypt', player: EGYPT }, { id: 'name-hindu', player: HINDU }].forEach(({ id, player }) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); el.blur(); }
+      // Prevent pasting rich text or line breaks
+    });
+    el.addEventListener('blur', () => {
+      const raw  = el.textContent.replace(/\n/g, '').trim().slice(0, 20);
+      const name = raw || currentTheme.players[player].name;
+      el.textContent = name;
+      LABELS[player] = `${name}'s turn — ${currentTheme.players[player].label.split('—')[1]?.trim() || ''}`;
+      // Refresh status bar if it's currently this player's turn
+      if (!gameState.gameOver && gameState.currentPlayer === player) {
+        statusEl.textContent = LABELS[player];
+      }
+    });
+  });
+}
+
+/* ─────────────────────────────────────────────
    Timed-mode state
 ───────────────────────────────────────────── */
 let timedMode    = false;
@@ -252,7 +293,7 @@ function showIntro() {
    Lore popup (1-in-20 chance after a game)
 ───────────────────────────────────────────── */
 function checkLorePopup() {
-  if (Math.random() > 0.05) return;
+  if (Math.random() > 0.15) return;
   const facts = currentTheme.loreFacts;
   if (!facts || !facts.length) return;
   const toast = document.getElementById('lore-toast');
@@ -754,11 +795,11 @@ function applyTheme(key) {
   spawnBgParticles();
 
   document.querySelector('#card-egypt .player-symbol').textContent = currentTheme.players.egypt.symbol;
-  document.querySelector('#card-egypt .player-name').textContent   = currentTheme.players.egypt.name;
+  document.getElementById('name-egypt').textContent                = currentTheme.players.egypt.name;
   document.querySelector('#card-egypt .player-title').textContent  = currentTheme.players.egypt.title;
   document.querySelector('#card-egypt .player-lore').textContent   = currentTheme.players.egypt.lore;
   document.querySelector('#card-hindu .player-symbol').textContent = currentTheme.players.hindu.symbol;
-  document.querySelector('#card-hindu .player-name').textContent   = currentTheme.players.hindu.name;
+  document.getElementById('name-hindu').textContent                = currentTheme.players.hindu.name;
   document.querySelector('#card-hindu .player-title').textContent  = currentTheme.players.hindu.title;
   document.querySelector('#card-hindu .player-lore').textContent   = currentTheme.players.hindu.lore;
 
@@ -954,6 +995,7 @@ function handleClick(i) {
       setAura(null);
       updateAllTimeStats('draw');
       updateMatchPips();
+      updateStreakBadges();
       checkAchievements('draw');
     } else {
       const w = result.winner;
@@ -994,6 +1036,7 @@ function handleClick(i) {
       burstParticles(w);
       updateAllTimeStats(w);
       updateMatchPips();
+      updateStreakBadges();
       checkAchievements(w);
       if (matchTarget && gameState.scores[w] >= Math.ceil(matchTarget / 2)) {
         setTimeout(() => showMatchVictory(w), 1200);
@@ -1090,6 +1133,7 @@ function newRound() {
   clearTimer();
   lastPlacedCell = -1;
   boardEl.classList.remove('game-over');
+  updateStreakBadges();
   boardEl.style.filter = '';
   cosmicAngle = 0;
   initChaosState();       // reset all chaos state for the new round
@@ -1338,6 +1382,7 @@ window.addEventListener('appinstalled', () => {
 /* ─────────────────────────────────────────────
    Init — restore saved prefs or default startup
 ───────────────────────────────────────────── */
+initEditableNames();
 if (!loadPrefs()) {
   setAura(EGYPT);
   renderBoard();

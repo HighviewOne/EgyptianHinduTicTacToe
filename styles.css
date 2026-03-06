@@ -1041,6 +1041,19 @@ header {
 .btn-install { background: linear-gradient(135deg,rgba(var(--p1-rgb),.18),rgba(var(--p2-rgb),.14)); border: 1px solid rgba(var(--p1-rgb),.35); color: var(--egypt-sand); }
 .btn-install:hover { background: linear-gradient(135deg,rgba(var(--p1-rgb),.30),rgba(var(--p2-rgb),.24)); }
 
+/* ── Touch: kill 300 ms tap delay on all interactive elements ── */
+.cell, .btn, .fun-btn, .mode-btn, .theme-btn, .match-btn, .mv-btn,
+.btn-stats-reset, .btn-stats-close { touch-action: manipulation; }
+
+/* ── Editable player names ── */
+.player-name[contenteditable] { cursor: text; outline: none; border-bottom: 1px dashed transparent; transition: border-color .2s; padding-bottom: 2px; border-radius: 2px; }
+.player-name[contenteditable]:hover { border-bottom-color: rgba(255,255,255,.28); }
+.player-name[contenteditable]:focus { border-bottom-color: rgba(255,255,255,.6); background: rgba(255,255,255,.04); }
+
+/* ── Streak fire badge ── */
+.streak-badge { font-size: .7rem; font-weight: 700; letter-spacing: .04em; min-height: 1em; color: #ff9933; text-shadow: 0 0 8px rgba(255,153,51,.7); opacity: 0; transition: opacity .35s; }
+.streak-badge.visible { opacity: 1; }
+
 /* ── Cell placement pop ── */
 @keyframes cellPop {
   0%   { transform: scale(0.25) rotate(-8deg); opacity: 0; }
