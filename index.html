@@ -123,6 +123,13 @@
     </div>
   </div>
 
+  <!-- board skin picker -->
+  <div class="skin-row">
+    <button class="skin-btn active" data-skin="" title="Stone (default)">🪨</button>
+    <button class="skin-btn" data-skin="skin-marble" title="Marble">🏛</button>
+    <button class="skin-btn" data-skin="skin-neon" title="Neon">⚡</button>
+  </div>
+
   <!-- controls -->
   <div class="controls">
     <button class="btn btn-restart" id="btn-restart">New Round</button>
@@ -133,6 +140,7 @@
     <input type="range" id="vol-slider" class="vol-slider" min="0" max="100" value="70" title="Volume">
     <button class="btn btn-reset-score" id="btn-reset">Reset Scores</button>
     <button class="btn btn-stats" id="btn-stats">📊 Stats</button>
+    <button class="btn btn-lore" id="btn-lore">📖 Lore</button>
     <button class="btn btn-share" id="btn-share">📤 Share</button>
   </div>
 
@@ -214,6 +222,15 @@
       <button class="btn btn-stats-reset" id="btn-stats-reset">Reset Stats</button>
       <button class="btn btn-stats-close" id="btn-stats-close">Close</button>
     </div>
+  </div>
+</div>
+
+<!-- Lore encyclopedia modal -->
+<div class="lore-modal" id="lore-modal">
+  <div class="lore-inner">
+    <div class="lore-title" id="lore-title">📖 Ancient Lore</div>
+    <div class="lore-list" id="lore-list"></div>
+    <button class="btn btn-lore-close" id="btn-lore-close">Close</button>
   </div>
 </div>
 

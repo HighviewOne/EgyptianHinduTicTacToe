@@ -473,6 +473,39 @@ function updateEvalBar(isHinduTurn) {
 }
 
 /* ─────────────────────────────────────────────
+   Move quality — badge (✓ / ≈ / ✗) on placed cell
+───────────────────────────────────────────── */
+function computeMoveQuality(snap, player, moveIdx) {
+  const b = [...snap];
+  const empty = b.reduce((a, v, i) => v ? a : [...a, i], []);
+  if (empty.length <= 1) return 'best'; // no real choice
+  const isMax = player === HINDU;
+  let bestEval = isMax ? -Infinity : Infinity;
+  for (const idx of empty) {
+    b[idx] = player;
+    const val = minimax(b, !isMax, -Infinity, Infinity);
+    b[idx] = null;
+    bestEval = isMax ? Math.max(bestEval, val) : Math.min(bestEval, val);
+  }
+  b[moveIdx] = player;
+  const actualEval = minimax(b, !isMax, -Infinity, Infinity);
+  b[moveIdx] = null;
+  const delta = isMax ? (bestEval - actualEval) : (actualEval - bestEval);
+  if (delta <= 0)  return 'best';
+  if (delta < 10)  return 'fine';
+  return 'blunder';
+}
+function showMoveBadge(cellIdx, quality) {
+  const cells = boardEl.querySelectorAll('.cell');
+  if (!cells[cellIdx]) return;
+  const badge = document.createElement('div');
+  badge.className = `move-badge quality-${quality}`;
+  badge.textContent = quality === 'best' ? '✓' : quality === 'fine' ? '≈' : '✗';
+  cells[cellIdx].appendChild(badge);
+  setTimeout(() => badge.remove(), 1600);
+}
+
+/* ─────────────────────────────────────────────
    Hint — show optimal cell for current player
 ───────────────────────────────────────────── */
 let hintTimer = null;
@@ -1057,6 +1090,11 @@ function handleClick(i) {
     return;
   }
 
+  // Capture board for move quality badge (before placing)
+  const _snapForBadge = [...board];
+  const _isHumanMove  = !aiMode || currentPlayer === EGYPT;
+  const _clickedI     = i;
+
   // Place piece
   board[i] = currentPlayer;
   let actualI = i;
@@ -1294,6 +1332,15 @@ function handleClick(i) {
     }
 
     renderBoard();
+
+    // Move quality badge (human moves only, not on game-over)
+    if (_isHumanMove) {
+      const _fc = lastPlacedCell;
+      setTimeout(() => {
+        const q = computeMoveQuality(_snapForBadge, currentPlayer, _clickedI);
+        showMoveBadge(_fc, q);
+      }, 80);
+    }
 
     // ── CHAOS: Phantom Veil — pieces invisible for 1.5 s ─────────────
     if (chaosMode && chaosHas('phantom-veil')) {
@@ -1563,6 +1610,33 @@ document.getElementById('btn-stats-close').addEventListener('click', () => {
   document.getElementById('stats-modal').classList.remove('visible');
 });
 document.getElementById('btn-stats-reset').addEventListener('click', resetAllTimeStats);
+
+// Board skin picker
+document.querySelectorAll('.skin-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.skin-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const wrapper = boardEl.closest('.board-wrapper');
+    wrapper.className = 'board-wrapper' + (btn.dataset.skin ? ' ' + btn.dataset.skin : '');
+  });
+});
+
+// Lore encyclopedia
+function showLoreModal() {
+  const facts = currentTheme.loreFacts || [];
+  document.getElementById('lore-title').textContent = `📖 ${currentTheme.label}`;
+  document.getElementById('lore-list').innerHTML = facts.map((f, i) =>
+    `<div class="lore-item"><span class="lore-num">${i + 1}.</span>${f}</div>`
+  ).join('');
+  document.getElementById('lore-modal').classList.add('visible');
+}
+document.getElementById('btn-lore').addEventListener('click', showLoreModal);
+document.getElementById('btn-lore-close').addEventListener('click', () => {
+  document.getElementById('lore-modal').classList.remove('visible');
+});
+document.getElementById('lore-modal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.remove('visible');
+});
 
 document.getElementById('mv-btn').addEventListener('click', () => {
   document.getElementById('match-victory').classList.remove('visible');

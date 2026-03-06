@@ -440,6 +440,133 @@ header {
   to   { transform: scale(1)  rotate(0deg);  opacity: 1; }
 }
 
+/* ── Move quality badge ── */
+.move-badge {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: .6rem;
+  font-weight: 900;
+  line-height: 18px;
+  text-align: center;
+  pointer-events: none;
+  z-index: 5;
+  animation: badgePop 1.55s ease forwards;
+}
+.quality-best    { background: #22c55e; color: #fff; box-shadow: 0 0 8px #22c55e; }
+.quality-fine    { background: #eab308; color: #1a1200; box-shadow: 0 0 8px #eab308; }
+.quality-blunder { background: #ef4444; color: #fff; box-shadow: 0 0 8px #ef4444; }
+@keyframes badgePop {
+  0%  { transform: scale(0); opacity: 0; }
+  15% { transform: scale(1.3); opacity: 1; }
+  25% { transform: scale(1); opacity: 1; }
+  70% { opacity: 1; }
+  100%{ transform: scale(.5) translateY(-4px); opacity: 0; }
+}
+
+/* ── Board skins ── */
+.skin-row {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin: 8px 0 2px;
+}
+.skin-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.05);
+  cursor: pointer;
+  font-size: .9rem;
+  line-height: 32px;
+  text-align: center;
+  transition: all .2s;
+  touch-action: manipulation;
+}
+.skin-btn:hover { background: rgba(255,255,255,.12); }
+.skin-btn.active {
+  border-color: rgba(var(--p1-rgb),.5);
+  background: rgba(var(--p1-rgb),.15);
+  box-shadow: 0 0 10px rgba(var(--p1-rgb),.3);
+}
+/* Marble skin */
+.board-wrapper.skin-marble {
+  background: linear-gradient(135deg, rgba(220,210,195,.08), rgba(180,170,155,.05));
+}
+.board-wrapper.skin-marble .cell {
+  background: linear-gradient(135deg, rgba(235,228,215,.11), rgba(200,192,178,.07));
+  border-color: rgba(200,185,160,.22);
+}
+.board-wrapper.skin-marble .cell.taken {
+  background: linear-gradient(135deg, rgba(235,228,215,.17), rgba(200,192,178,.13));
+}
+/* Neon skin */
+.board-wrapper.skin-neon {
+  background: rgba(0,0,0,.55);
+  box-shadow: 0 0 40px rgba(var(--p1-rgb),.14), 0 0 80px rgba(var(--p2-rgb),.09);
+}
+.board-wrapper.skin-neon .cell {
+  background: rgba(0,0,0,.5);
+  border-color: rgba(var(--p1-rgb),.22);
+  box-shadow: inset 0 0 10px rgba(var(--p1-rgb),.06);
+}
+.board-wrapper.skin-neon .cell.egypt-cell {
+  border-color: rgba(var(--p1-rgb),.55);
+  box-shadow: 0 0 18px rgba(var(--p1-rgb),.28);
+  text-shadow: 0 0 18px var(--egypt-gold), 0 0 42px var(--egypt-gold);
+}
+.board-wrapper.skin-neon .cell.hindu-cell {
+  border-color: rgba(var(--p2-rgb),.55);
+  box-shadow: 0 0 18px rgba(var(--p2-rgb),.28);
+  text-shadow: 0 0 18px var(--hindu-saffron), 0 0 42px var(--hindu-saffron);
+}
+
+/* ── Lore encyclopedia modal ── */
+.lore-modal {
+  position: fixed; inset: 0; z-index: 300;
+  background: rgba(0,0,0,.65);
+  backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity .25s;
+}
+.lore-modal.visible { opacity: 1; pointer-events: all; }
+.lore-inner {
+  background: var(--egypt-dark);
+  border: 1px solid rgba(255,255,255,.13);
+  border-radius: 20px;
+  padding: 28px 28px 20px;
+  max-width: 420px;
+  width: 90%;
+  max-height: 78vh;
+  overflow-y: auto;
+}
+.lore-title {
+  font-family: 'Cinzel', serif;
+  font-size: 1rem;
+  color: var(--egypt-sand);
+  text-align: center;
+  margin-bottom: 18px;
+}
+.lore-item {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+  font-size: .82rem;
+  line-height: 1.65;
+  color: rgba(255,255,255,.75);
+}
+.lore-num {
+  color: var(--egypt-gold);
+  font-weight: 700;
+  flex-shrink: 0;
+  min-width: 16px;
+}
+.btn-lore-close { display: block; margin: 8px auto 0; }
+
 /* ── controls ── */
 .controls {
   display: flex;
