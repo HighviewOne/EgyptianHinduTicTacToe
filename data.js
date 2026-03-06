@@ -213,6 +213,12 @@ const CHAOS_RULES = [
     desc: 'A blinding divine flash strikes at the worst possible moment!' },
   { id: 'divine-lag',  icon: '⏳', name: 'Divine Lag',
     desc: 'Time itself warps, freezing all input for 3 celestial seconds!' },
+  { id: 'holy-ground', icon: '⛪', name: 'Holy Ground',
+    desc: 'One sacred cell is divinely forbidden — none may claim it!' },
+  { id: 'phantom-veil',icon: '👁', name: 'Phantom Veil',
+    desc: 'After each move, all pieces vanish from sight for 1.5 eerie seconds!' },
+  { id: 'treachery',   icon: '🗡', name: 'Treachery',
+    desc: 'Once per round a freshly placed piece may betray its master and switch sides!' },
 ];
 
 /* ── Quips — 15 % chance to flash after a move ── */

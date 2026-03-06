@@ -87,6 +87,9 @@ function updateAllTimeStats(outcome) {
     s[outcome] = (s[outcome] || 0) + 1;
     s.longestStreak = Math.max(s.longestStreak || 0, gameState.streaks[outcome]);
   }
+  if (!s.recentGames) s.recentGames = [];
+  s.recentGames.push(outcome);
+  if (s.recentGames.length > 10) s.recentGames.shift();
   saveAllTimeStats(s);
 }
 function showStatsModal() {
@@ -103,6 +106,17 @@ function showStatsModal() {
     <div class="stat-card"><div class="stat-val">${s.longestStreak || 0}</div><div class="stat-lbl">BEST STREAK</div></div>
     <div class="stat-card"><div class="stat-val">${winRate}%</div><div class="stat-lbl">${p1.name.toUpperCase()} WIN RATE</div></div>
   `;
+  // Recent games row
+  if (s.recentGames && s.recentGames.length) {
+    const dots = s.recentGames.map(g => {
+      const color = g === EGYPT ? 'var(--egypt-gold)' : g === HINDU ? 'var(--hindu-saffron)' : 'rgba(255,255,255,.35)';
+      const label = g === EGYPT ? p1.name : g === HINDU ? p2.name : 'Draw';
+      return `<span class="recent-dot" style="background:${color}" title="${label}"></span>`;
+    }).join('');
+    document.getElementById('stats-grid').insertAdjacentHTML('afterend',
+      `<div class="recent-games"><div class="recent-label">LAST ${s.recentGames.length} GAMES</div><div class="recent-dots">${dots}</div></div>`
+    );
+  }
   document.getElementById('stats-modal').classList.add('visible');
 }
 function resetAllTimeStats() {
@@ -338,6 +352,7 @@ function renderBoard(winCells = []) {
       cell.textContent = SYMBOLS[val];
     }
     if (chaosMode && chaosState.ghostCell === i && val) cell.classList.add('ghost-cell');
+    if (chaosMode && chaosState.holyCell === i && !val) cell.classList.add('holy-cell');
     if (i === lastPlacedCell && val) cell.classList.add('fresh');
     if (winCells.includes(i)) cell.classList.add('win-cell');
     cell.addEventListener('click', () => handleClick(i));
@@ -414,6 +429,21 @@ function drawWinLine(cells, winner) {
 function clearWinLine() {
   winLineEl.style.display = 'none';
   winLineEl.classList.remove('animate');
+}
+
+/* ─────────────────────────────────────────────
+   Position evaluation bar (minimax score → bar)
+───────────────────────────────────────────── */
+function updateEvalBar(isHinduTurn) {
+  const eEl = document.getElementById('eval-egypt');
+  const hEl = document.getElementById('eval-hindu');
+  if (!eEl || !hEl) return;
+  if (gameState.board.every(v => !v)) { eEl.style.width = '50%'; hEl.style.width = '50%'; return; }
+  const score = minimax([...gameState.board], isHinduTurn, -Infinity, Infinity);
+  // +10 = HINDU wins, -10 = EGYPT wins → hinduPct in [0,100]
+  const hinduPct = Math.round((score + 10) / 20 * 100);
+  eEl.style.width = `${100 - hinduPct}%`;
+  hEl.style.width = `${hinduPct}%`;
 }
 
 /* ─────────────────────────────────────────────
@@ -520,6 +550,8 @@ function initChaosState() {
     blessingUsed: false, skipUsed: false, skipNext: null,
     mirrorUsed: false, mirror: false,
     solarUsed: false, lagUsed: false, lagActive: false,
+    holyCell: chaosHas('holy-ground') ? randInt(9) : -1,
+    treacheryUsed: false,
   };
 }
 
@@ -962,6 +994,10 @@ function handleClick(i) {
   // Guards
   if (gameState.gameOver || board[i] || aiThinking || chaosState.lagActive) return;
   if (aiMode && currentPlayer === HINDU) return;
+  if (chaosMode && chaosHas('holy-ground') && chaosState.holyCell === i) {
+    showChaosEvent('⛪ HOLY GROUND! That sacred cell is divinely forbidden!', 1600);
+    return;
+  }
 
   // Clear move timer as soon as a move is registered
   clearTimer();
@@ -1058,6 +1094,14 @@ function handleClick(i) {
     markChaosUsed('divine-lag');
     showChaosEvent('⏳ DIVINE LAG! The celestial servers are buffering... please hold...', 3300);
     setTimeout(() => { chaosState.lagActive = false; }, 3000);
+  }
+
+  // ── CHAOS: Treachery (25 % once — placed piece switches allegiance) ─
+  if (chaosMode && chaosHas('treachery') && !chaosState.treacheryUsed && Math.random() < 0.25) {
+    chaosState.treacheryUsed = true;
+    markChaosUsed('treachery');
+    board[actualI] = getNextPlayer(currentPlayer);
+    showChaosEvent(`🗡 TREACHERY! The piece betrays its master and now serves the enemy!`);
   }
 
   // ── Record board snapshot for replay ─────────────────────────────
@@ -1194,6 +1238,12 @@ function handleClick(i) {
 
     renderBoard();
 
+    // ── CHAOS: Phantom Veil — pieces invisible for 1.5 s ─────────────
+    if (chaosMode && chaosHas('phantom-veil')) {
+      boardEl.classList.add('phantom-veil');
+      setTimeout(() => boardEl.classList.remove('phantom-veil'), 1500);
+    }
+
     if (!grantBlessing) gameState.currentPlayer = getNextPlayer(currentPlayer);
 
     const nextLabel = LABELS[gameState.currentPlayer];
@@ -1214,6 +1264,7 @@ function handleClick(i) {
     setAura(gameState.currentPlayer);
     updateTurnUI();
     updateUndoBtn();
+    updateEvalBar(gameState.currentPlayer === HINDU);
     scheduleAI();
     // Start timer for the next human move
     if (!aiMode || gameState.currentPlayer === EGYPT) startTimer();
@@ -1237,6 +1288,7 @@ function newRound() {
   updateStreakBadges();
   document.getElementById('btn-replay').style.display = 'none';
   document.getElementById('btn-hint').disabled = false;
+  updateEvalBar(false); // reset to neutral
   boardEl.style.filter = '';
   cosmicAngle = 0;
   initChaosState();       // reset all chaos state for the new round
