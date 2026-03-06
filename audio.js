@@ -1,12 +1,29 @@
 /* ─────────────────────────────────────────────
    audio.js — Web Audio API (no files needed)
-   Exposes: sfxEgypt, sfxHindu, sfxWin, sfxDraw,
-            toggleMusic, startDrone, stopDrone
+   Exposes: sfxPlace, sfxWin, sfxDraw, sfxChaos,
+            toggleMusic, startDrone, stopDrone,
+            setVolume
 ───────────────────────────────────────────── */
 let audioCtx = null;
 function getCtx() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   return audioCtx;
+}
+
+/* Master gain — all audio routes through here for volume control */
+let masterGainNode = null;
+function getMasterGain() {
+  const ctx = getCtx();
+  if (!masterGainNode) {
+    masterGainNode = ctx.createGain();
+    masterGainNode.gain.setValueAtTime(0.7, ctx.currentTime);
+    masterGainNode.connect(ctx.destination);
+  }
+  return masterGainNode;
+}
+function setVolume(v) {
+  const ctx = getCtx();
+  getMasterGain().gain.linearRampToValueAtTime(Math.max(0, Math.min(1, v)), ctx.currentTime + 0.04);
 }
 
 function note(freq, type, gainPeak, attackT, decayT, startOffset = 0) {
@@ -15,7 +32,7 @@ function note(freq, type, gainPeak, attackT, decayT, startOffset = 0) {
   const osc  = ctx.createOscillator();
   const gain = ctx.createGain();
   osc.connect(gain);
-  gain.connect(ctx.destination);
+  gain.connect(getMasterGain());
   osc.type      = type;
   osc.frequency.setValueAtTime(freq, t);
   gain.gain.setValueAtTime(0, t);
@@ -25,16 +42,59 @@ function note(freq, type, gainPeak, attackT, decayT, startOffset = 0) {
   osc.stop(t + attackT + decayT);
 }
 
+/* ── Per-theme placement sounds ── */
 function sfxEgypt() {
   note(110,  'sine',     0.5,  0.01, 0.6);
   note(220,  'sine',     0.18, 0.01, 0.35);
   note(330,  'triangle', 0.08, 0.01, 0.2);
 }
-
 function sfxHindu() {
   note(660,  'sine', 0.35, 0.005, 0.9);
   note(1320, 'sine', 0.15, 0.005, 0.55);
   note(1980, 'sine', 0.07, 0.005, 0.3);
+}
+
+function sfxPlace(themeKey, player) {
+  switch (themeKey) {
+    case 'classic':
+      // clean digital beep — X is high, O is low
+      player === 'egypt'
+        ? note(880, 'square', 0.14, 0.005, 0.10)
+        : note(440, 'square', 0.14, 0.005, 0.10);
+      break;
+    case 'greek-norse':
+      // brass-flavoured interval — Zeus majestically high, Norse growling low
+      if (player === 'egypt') {
+        note(261.63, 'triangle', 0.28, 0.01, 0.3);
+        note(392,    'triangle', 0.14, 0.01, 0.25, 0.07);
+      } else {
+        note(130.81, 'triangle', 0.30, 0.01, 0.35);
+        note(196,    'triangle', 0.12, 0.01, 0.28, 0.08);
+      }
+      break;
+    case 'samurai-ninja':
+      // Samurai: sharp koto strike; Ninja: muted low thud
+      if (player === 'egypt') {
+        note(493.88, 'triangle', 0.35, 0.002, 0.22);
+        note(659.25, 'sine',     0.10, 0.005, 0.18, 0.04);
+      } else {
+        note(110, 'triangle', 0.40, 0.002, 0.18);
+        note(165, 'sine',     0.08, 0.005, 0.14, 0.03);
+      }
+      break;
+    case 'dragon-phoenix':
+      // Dragon: deep pentatonic hit; Phoenix: bright rising chime
+      if (player === 'egypt') {
+        note(146.83, 'sine', 0.32, 0.005, 0.5);
+        note(220,    'sine', 0.12, 0.005, 0.4, 0.1);
+      } else {
+        note(329.63, 'sine', 0.28, 0.005, 0.45);
+        note(493.88, 'sine', 0.12, 0.005, 0.38, 0.09);
+      }
+      break;
+    default: // egypt-hindu + random
+      player === 'egypt' ? sfxEgypt() : sfxHindu();
+  }
 }
 
 function sfxWin(player) {
@@ -93,7 +153,7 @@ function startDrone() {
   const out = ctx.createGain();
   out.gain.setValueAtTime(0, ctx.currentTime);
   out.gain.linearRampToValueAtTime(1, ctx.currentTime + 2.5);
-  out.connect(ctx.destination);
+  out.connect(getMasterGain());
 
   const oscs = droneFreqs.map(({ freq, vol }) => {
     const osc = ctx.createOscillator();

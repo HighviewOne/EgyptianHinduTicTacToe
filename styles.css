@@ -483,6 +483,36 @@ header {
   border: 1px solid rgba(255,255,255,.12);
 }
 .btn-music:hover  { background: rgba(255,255,255,.12); color: rgba(255,255,255,.8); }
+/* Volume slider */
+.vol-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 64px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255,255,255,.18);
+  outline: none;
+  cursor: pointer;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+.vol-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--egypt-gold);
+  cursor: pointer;
+  box-shadow: 0 0 6px rgba(var(--p1-rgb),.5);
+}
+.vol-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: none;
+  border-radius: 50%;
+  background: var(--egypt-gold);
+  cursor: pointer;
+}
 .btn-music.on {
   background: linear-gradient(135deg, rgba(212,160,23,.25), rgba(255,107,53,.2));
   color: var(--egypt-sand);
@@ -1023,6 +1053,28 @@ header {
 .recent-label { font-size: .58rem; letter-spacing: .12em; color: rgba(255,255,255,.35); margin-bottom: 8px; }
 .recent-dots { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
 .recent-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; box-shadow: 0 0 6px currentColor; }
+/* Cell heat map (stats modal) */
+.heat-section { text-align: center; margin: 16px 0 8px; }
+.heat-title { font-size: .58rem; letter-spacing: .12em; color: rgba(255,255,255,.35); margin-bottom: 10px; }
+.heat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+  max-width: 108px;
+  margin: 0 auto;
+}
+.heat-cell {
+  aspect-ratio: 1;
+  border-radius: 5px;
+  border: 1px solid rgba(255,255,255,.09);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .6rem;
+  font-weight: 700;
+  color: rgba(255,255,255,.55);
+  transition: background .3s;
+}
 .stats-actions { display: flex; gap: 10px; justify-content: center; }
 .btn-stats-reset { background: rgba(255,68,68,.2); border: 1px solid rgba(255,68,68,.3); color: #ff8888; }
 .btn-stats-reset:hover { background: rgba(255,68,68,.35); }

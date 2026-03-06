@@ -109,16 +109,28 @@ function showStatsModal() {
     <div class="stat-card"><div class="stat-val">${winRate}%</div><div class="stat-lbl">${p1.name.toUpperCase()} WIN RATE</div></div>
   `;
   // Recent games row
+  const afterGrid = document.getElementById('stats-grid');
   if (s.recentGames && s.recentGames.length) {
     const dots = s.recentGames.map(g => {
       const color = g === EGYPT ? 'var(--egypt-gold)' : g === HINDU ? 'var(--hindu-saffron)' : 'rgba(255,255,255,.35)';
       const label = g === EGYPT ? p1.name : g === HINDU ? p2.name : 'Draw';
       return `<span class="recent-dot" style="background:${color}" title="${label}"></span>`;
     }).join('');
-    document.getElementById('stats-grid').insertAdjacentHTML('afterend',
+    afterGrid.insertAdjacentHTML('afterend',
       `<div class="recent-games"><div class="recent-label">LAST ${s.recentGames.length} GAMES</div><div class="recent-dots">${dots}</div></div>`
     );
   }
+  // Cell heat map
+  const freq = s.cellFreq || Array(9).fill(0);
+  const maxF = Math.max(...freq, 1);
+  const heatCells = freq.map((f, idx) => {
+    const heat = f / maxF;
+    const bg = `rgba(212,160,23,${(heat * 0.72).toFixed(2)})`;
+    return `<div class="heat-cell" style="background:${bg}" title="Position ${idx+1}: ${f} play${f!==1?'s':''}">${f || ''}</div>`;
+  }).join('');
+  document.getElementById('stats-modal').querySelector('.stats-actions').insertAdjacentHTML('beforebegin',
+    `<div class="heat-section"><div class="heat-title">CELL HOT SPOTS</div><div class="heat-grid">${heatCells}</div></div>`
+  );
   document.getElementById('stats-modal').classList.add('visible');
 }
 function resetAllTimeStats() {
@@ -897,7 +909,10 @@ function shareResult() {
   const p2 = currentTheme.players.hindu;
   const { egypt, hindu, draws } = gameState.scores;
   const drawPart = draws ? ` (${draws} draw${draws > 1 ? 's' : ''})` : '';
-  const text = `${p1.symbol} ${p1.name} ${egypt}–${hindu} ${p2.name} ${p2.symbol}${drawPart} | Egyptian & Hindu Tic-Tac-Toe`;
+  // Emoji board grid (Wordle-style)
+  const sym = v => v === EGYPT ? p1.symbol : v === HINDU ? p2.symbol : '·';
+  const gridRows = [0, 3, 6].map(r => [0,1,2].map(c => sym(gameState.board[r+c])).join(' '));
+  const text = `${p1.symbol} ${p1.name} ${egypt}–${hindu} ${p2.name} ${p2.symbol}${drawPart}\n${gridRows.join('\n')}\nEgyptian & Hindu Tic-Tac-Toe`;
   const btn  = document.getElementById('btn-share');
   if (navigator.share) {
     navigator.share({ title: 'Ancient Tic-Tac-Toe', text }).catch(() => {});
@@ -1046,6 +1061,8 @@ function handleClick(i) {
   board[i] = currentPlayer;
   let actualI = i;
   lastPlacedCell = i;
+  // Track cell frequency for heatmap
+  { const st = loadAllTimeStats(); if (!st.cellFreq) st.cellFreq = Array(9).fill(0); st.cellFreq[i]++; saveAllTimeStats(st); }
 
   // ── CHAOS: Wild Turn (30 % chance once, after ≥ 2 pieces on board) ─
   if (chaosMode && chaosHas('wild-turn') && !chaosState.wildUsed && board.filter(v => v).length >= 2) {
@@ -1262,7 +1279,7 @@ function handleClick(i) {
       if (arr && arr.length) quipText = arr[randInt(arr.length)];
     }
 
-    currentPlayer === EGYPT ? sfxEgypt() : sfxHindu();
+    sfxPlace(currentThemeKey, currentPlayer);
     updateBoardColor();
     if (cosmicMode) cosmicAngle += 3;
     updateBoardTransform();
@@ -1478,6 +1495,7 @@ document.addEventListener('keydown', e => {
 document.getElementById('btn-restart').addEventListener('click', newRound);
 document.getElementById('btn-reset').addEventListener('click', resetScores);
 document.getElementById('btn-music').addEventListener('click', toggleMusic);
+document.getElementById('vol-slider').addEventListener('input', e => setVolume(e.target.value / 100));
 document.getElementById('mode-2p').addEventListener('click',     () => setMode(null));
 document.getElementById('mode-easy').addEventListener('click',   () => setMode('easy'));
 document.getElementById('mode-medium').addEventListener('click', () => setMode('medium'));
