@@ -422,7 +422,13 @@ header {
 }
 
 .cell.win-cell {
-  animation: winPulse 1s ease-in-out infinite;
+  animation: winBurst 0.38s cubic-bezier(0.22,1,0.36,1) calc(var(--win-delay,0) * 1ms) both,
+             winPulse 1s ease-in-out calc(var(--win-delay,0) * 1ms + 0.38s) infinite;
+}
+@keyframes winBurst {
+  0%   { transform: scale(1);    filter: brightness(1);   }
+  40%  { transform: scale(1.25); filter: brightness(1.8); }
+  100% { transform: scale(1);    filter: brightness(1);   }
 }
 @keyframes winPulse {
   0%,100% { transform: scale(1);   }

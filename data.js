@@ -337,6 +337,11 @@ const ACHIEVEMENTS = [
   { id: 'speed-round',  icon: '💨',  name: 'Lightning Strike',  desc: 'Win in the minimum 5 moves' },
   { id: 'night-owl',    icon: '🌙',  name: 'Night Owl',         desc: 'Play between 22:00 and 04:00' },
   { id: 'undisputed',   icon: '👑',  name: 'Undisputed',        desc: 'Win a Best of 3 without dropping a round' },
+  { id: 'dragon-lord',  icon: '🐉',  name: 'Dragon Lord',       desc: 'Win a game with the Dragon vs Phoenix theme' },
+  { id: 'penta-streak', icon: '🔥',  name: 'Unstoppable',       desc: 'Win 5 games in a row' },
+  { id: 'pure-intuition',icon:'🎯',  name: 'Pure Intuition',    desc: 'Win a game without ever using the Hint button' },
+  { id: 'chaos-champ',  icon: '🌪',  name: 'Chaos Champion',    desc: 'Win a round with all 3 chaos rules active' },
+  { id: 'comeback',     icon: '🔄',  name: 'Comeback King',     desc: 'Win a match after trailing 0 wins to your opponent\'s 2+' },
 ];
 
 /* ── All-time stats localStorage key ── */

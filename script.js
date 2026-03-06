@@ -68,6 +68,8 @@ let matchTarget = 0;   // 0 = free play, 3/5/7 = best-of-N
 ───────────────────────────────────────────── */
 let gameLog   = [];   // Array of board snapshots after each move
 let replaying = false;
+let hintUsedThisGame  = false;   // true once showHint() fires this round
+let trailedInMatch    = false;   // true once opponent had 2+ wins while player had 0
 
 /* ─────────────────────────────────────────────
    All-time stats (localStorage)
@@ -185,6 +187,12 @@ function checkAchievements(winner) {
     // Undisputed: win Best of 3 with opponent at 0 wins
     const loser = winner === EGYPT ? HINDU : EGYPT;
     if (matchTarget === 3 && gameState.scores[winner] >= 2 && gameState.scores[loser] === 0) tryUnlock('undisputed');
+    // Batch-10 achievements
+    if (currentThemeKey === 'dragon-phoenix') tryUnlock('dragon-lord');
+    if (gameState.streaks[winner] >= 5) tryUnlock('penta-streak');
+    if (!hintUsedThisGame) tryUnlock('pure-intuition');
+    if (chaosMode && activeChaosRules.length >= 3) tryUnlock('chaos-champ');
+    if (trailedInMatch && matchTarget >= 5 && gameState.scores[winner] >= Math.ceil(matchTarget / 2)) tryUnlock('comeback');
   }
 }
 
@@ -347,6 +355,9 @@ function renderBoard(winCells = []) {
   gameState.board.forEach((val, i) => {
     const cell = document.createElement('div');
     cell.className = 'cell';
+    cell.setAttribute('role', 'gridcell');
+    cell.setAttribute('aria-label',
+      val ? `${currentTheme.players[val].name} at position ${i + 1}` : `Empty position ${i + 1}`);
     if (val) {
       cell.classList.add('taken', `${val}-cell`);
       cell.textContent = SYMBOLS[val];
@@ -354,7 +365,10 @@ function renderBoard(winCells = []) {
     if (chaosMode && chaosState.ghostCell === i && val) cell.classList.add('ghost-cell');
     if (chaosMode && chaosState.holyCell === i && !val) cell.classList.add('holy-cell');
     if (i === lastPlacedCell && val) cell.classList.add('fresh');
-    if (winCells.includes(i)) cell.classList.add('win-cell');
+    if (winCells.includes(i)) {
+      cell.classList.add('win-cell');
+      cell.style.setProperty('--win-delay', winCells.indexOf(i) * 80);
+    }
     cell.addEventListener('click', () => handleClick(i));
     boardEl.appendChild(cell);
   });
@@ -481,6 +495,7 @@ function showHint() {
   if (aiMode && gameState.currentPlayer === HINDU) return;
   clearTimeout(hintTimer);
   boardEl.querySelectorAll('.cell').forEach(c => c.classList.remove('hint-cell'));
+  hintUsedThisGame = true;
   const best = getHintMove([...gameState.board], gameState.currentPlayer);
   if (best < 0) return;
   const cell = boardEl.querySelectorAll('.cell')[best];
@@ -1156,6 +1171,13 @@ function handleClick(i) {
     } else {
       const w = result.winner;
       sfxWin(w);
+      // Track trailing condition for Comeback King achievement
+      if (matchTarget >= 5) {
+        const loserCur = w === EGYPT ? HINDU : EGYPT;
+        if (gameState.scores[loserCur] >= 2 && gameState.scores[w] === 0) {
+          trailedInMatch = true;
+        }
+      }
       gameState.scores[w]++;
       const scoreEl = w === EGYPT ? scoreEgypt : scoreHindu;
       scoreEl.textContent = gameState.scores[w];
@@ -1303,6 +1325,7 @@ function newRound() {
   lastPlacedCell = -1;
   gameLog = [];
   replaying = false;
+  hintUsedThisGame = false;
   boardEl.classList.remove('game-over');
   updateStreakBadges();
   document.getElementById('btn-replay').style.display = 'none';
@@ -1352,6 +1375,7 @@ function resetScores() {
   gameState.scores     = { egypt: 0, hindu: 0, draws: 0 };
   gameState.streaks    = { egypt: 0, hindu: 0 };
   gameState.lastWinner = null;
+  trailedInMatch       = false;
   scoreEgypt.textContent = 0;
   scoreHindu.textContent = 0;
   drawsEl.textContent    = 0;
