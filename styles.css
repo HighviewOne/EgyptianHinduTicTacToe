@@ -1208,6 +1208,36 @@ header {
 .btn-stats-close { background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.15); color: rgba(255,255,255,.7); }
 .btn-stats-close:hover { background: rgba(255,255,255,.12); }
 
+/* ── Move history log panel ── */
+.move-log-panel { width: 100%; max-width: 420px; margin: 0 auto; }
+.move-log-body {
+  background: rgba(0,0,0,.3);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 10px;
+  padding: 8px 10px;
+  max-height: 120px;
+  overflow-y: auto;
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  align-content: flex-start;
+}
+.log-entry {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: .65rem;
+  opacity: .75;
+}
+.egypt-entry { color: var(--egypt-gold); }
+.hindu-entry { color: var(--hindu-saffron); }
+.log-turn { color: rgba(255,255,255,.3); font-size: .58rem; min-width: 14px; }
+.log-sym  { font-size: .72rem; }
+.log-pos  { font-family: monospace; font-size: .62rem; }
+.log-empty { font-size: .62rem; color: rgba(255,255,255,.25); font-style: italic; }
+.btn-log.on { background: rgba(var(--p1-rgb),.2); border-color: rgba(var(--p1-rgb),.4); color: var(--egypt-sand); }
+
 /* ── Floating background particles ── */
 .bg-particles {
   position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none;

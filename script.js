@@ -70,6 +70,10 @@ let gameLog   = [];   // Array of board snapshots after each move
 let replaying = false;
 let hintUsedThisGame  = false;   // true once showHint() fires this round
 let trailedInMatch    = false;   // true once opponent had 2+ wins while player had 0
+let spectatorMode = false;       // AI vs AI demo mode
+let _prevAiMode   = null;        // aiMode saved before spectator starts
+let moveLog = [];                // [{player, pos, turn}] per-round move history
+const POS_LABELS = ['A1','B1','C1','A2','B2','C2','A3','B3','C3'];
 
 /* ─────────────────────────────────────────────
    All-time stats (localStorage)
@@ -381,7 +385,7 @@ function renderBoard(winCells = []) {
       cell.classList.add('win-cell');
       cell.style.setProperty('--win-delay', winCells.indexOf(i) * 80);
     }
-    cell.addEventListener('click', () => handleClick(i));
+    if (!spectatorMode) cell.addEventListener('click', () => handleClick(i));
     boardEl.appendChild(cell);
   });
 }
@@ -548,6 +552,65 @@ function showHint() {
     cell.classList.add('hint-cell');
     hintTimer = setTimeout(() => cell.classList.remove('hint-cell'), 1800);
   }
+}
+
+/* ─────────────────────────────────────────────
+   AI vs AI spectator mode
+───────────────────────────────────────────── */
+function scheduleSpectatorAI() {
+  if (!spectatorMode || gameState.currentPlayer !== EGYPT || gameState.gameOver ||
+      aiThinking || introShowing || chaosShowing) return;
+  aiThinking = true;
+  boardEl.classList.add('ai-thinking');
+  const p = currentTheme.players.egypt;
+  statusEl.className = 'status-text egypt-msg';
+  statusEl.innerHTML = `${p.name} ponders<span class="thinking-dots"><span>.</span><span>.</span><span>.</span></span>`;
+  const delay = 480 + Math.random() * 520;
+  const snapBoard = [...gameState.board];
+  setTimeout(() => {
+    if (!spectatorMode || gameState.currentPlayer !== EGYPT || gameState.gameOver) {
+      aiThinking = false;
+      boardEl.classList.remove('ai-thinking');
+      return;
+    }
+    aiThinking = false;
+    boardEl.classList.remove('ai-thinking');
+    handleClick(getHintMove(snapBoard, EGYPT));
+  }, delay);
+}
+
+function toggleSpectator() {
+  spectatorMode = !spectatorMode;
+  const btn = document.getElementById('btn-spectator');
+  if (spectatorMode) {
+    _prevAiMode = aiMode;
+    aiMode = 'hard';  // HINDU will auto-play via existing scheduleAI()
+    btn.textContent = '⏹ Stop';
+    btn.classList.add('on');
+    showChaosEvent('👁 AI Demo — sit back and watch!', 2800);
+    newRound();
+  } else {
+    aiMode = _prevAiMode;
+    btn.textContent = '👁 Demo';
+    btn.classList.remove('on');
+    // Restore mode-button UI
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(aiMode ? `mode-${aiMode}` : 'mode-2p').classList.add('active');
+    newRound();
+  }
+}
+
+/* ─────────────────────────────────────────────
+   Move history log
+───────────────────────────────────────────── */
+function updateMoveLog() {
+  const body = document.getElementById('move-log-body');
+  if (!body) return;
+  if (!moveLog.length) { body.innerHTML = '<div class="log-empty">No moves yet</div>'; return; }
+  body.innerHTML = moveLog.map(m =>
+    `<div class="log-entry ${m.player}-entry"><span class="log-turn">${m.turn}</span><span class="log-sym">${SYMBOLS[m.player] || ''}</span><span class="log-pos">${m.pos}</span></div>`
+  ).join('');
+  body.scrollTop = body.scrollHeight;
 }
 
 /* ─────────────────────────────────────────────
@@ -1087,6 +1150,7 @@ function handleClick(i) {
     setAura(gameState.currentPlayer);
     updateTurnUI();
     scheduleAI();
+    scheduleSpectatorAI();
     return;
   }
 
@@ -1192,6 +1256,25 @@ function handleClick(i) {
   // ── Record board snapshot for replay ─────────────────────────────
   gameLog.push([...board]);
 
+  // ── Move log ────────────────────────────────────────────────────
+  moveLog.push({ player: currentPlayer, pos: POS_LABELS[lastPlacedCell] || `#${lastPlacedCell}`, turn: moveLog.length + 1 });
+  updateMoveLog();
+
+  // ── Opening name flash (first 3 moves) ─────────────────────────
+  const _preCount = _snapForBadge.filter(v => v).length;
+  if (_preCount === 0) {
+    const _opening = _clickedI === 4 ? '⚔ Center Gambit'
+                   : [0,2,6,8].includes(_clickedI) ? '♟ Corner Opening' : '◈ Edge Play';
+    setTimeout(() => showChaosEvent(_opening + '!', 1800), 350);
+  } else if (_preCount === 2) {
+    // Detect opposite-corner fork setup
+    const _boardNow = [..._snapForBadge]; _boardNow[_clickedI] = currentPlayer;
+    const _myCorners = [0,2,6,8].filter(c => _boardNow[c] === currentPlayer);
+    if (_myCorners.length === 2 && (_myCorners[0] + _myCorners[1] === 8)) {
+      setTimeout(() => showChaosEvent('⚡ Fork Setup! Danger!', 2000), 350);
+    }
+  }
+
   // ── Check winner (after all chaos mutations) ──────────────────────
   const result = checkWinner(board);
 
@@ -1278,6 +1361,10 @@ function handleClick(i) {
       }
     }
     updateUndoBtn();
+    // Spectator auto-restart (skip if tournament match victory is about to show)
+    if (spectatorMode && !matchTarget) {
+      setTimeout(() => { if (spectatorMode) newRound(); }, 2800);
+    }
   } else {
     // ── Turn switching ────────────────────────────────────────────────
 
@@ -1371,8 +1458,9 @@ function handleClick(i) {
     updateUndoBtn();
     updateEvalBar(gameState.currentPlayer === HINDU);
     scheduleAI();
+    scheduleSpectatorAI();
     // Start timer for the next human move
-    if (!aiMode || gameState.currentPlayer === EGYPT) startTimer();
+    if (!spectatorMode && (!aiMode || gameState.currentPlayer === EGYPT)) startTimer();
   }
 }
 
@@ -1388,6 +1476,8 @@ function newRound() {
   clearTimer();
   lastPlacedCell = -1;
   gameLog = [];
+  moveLog = [];
+  updateMoveLog();
   replaying = false;
   hintUsedThisGame = false;
   boardEl.classList.remove('game-over');
@@ -1424,8 +1514,9 @@ function newRound() {
 
   // If AI mode is active and India goes first this round, trigger it now.
   scheduleAI();
-  // Start move timer for human's turn
-  if (!aiMode || gameState.currentPlayer === EGYPT) startTimer();
+  scheduleSpectatorAI();
+  // Start move timer for human's turn (suppressed in spectator mode)
+  if (!spectatorMode && (!aiMode || gameState.currentPlayer === EGYPT)) startTimer();
 }
 
 /* ─────────────────────────────────────────────
@@ -1641,6 +1732,17 @@ document.getElementById('lore-modal').addEventListener('click', e => {
 document.getElementById('mv-btn').addEventListener('click', () => {
   document.getElementById('match-victory').classList.remove('visible');
   resetScores();
+});
+
+// Spectator / Demo mode
+document.getElementById('btn-spectator').addEventListener('click', toggleSpectator);
+
+// Move history log toggle
+document.getElementById('btn-log').addEventListener('click', () => {
+  const body = document.getElementById('move-log-body');
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : '';
+  document.getElementById('btn-log').classList.toggle('on', !open);
 });
 
 document.getElementById('btn-fullscreen').addEventListener('click', () => {
