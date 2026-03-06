@@ -194,7 +194,7 @@ function trackThemeAchievement(key) {
   if (!a._themes) a._themes = {};
   a._themes[key] = true;
   saveAchievements(a);
-  if (Object.keys(a._themes).length >= 4) {
+  if (Object.keys(a._themes).length >= 5) {
     if (!a['all-themes']) unlockAchievement(ACHIEVEMENTS.find(x => x.id === 'all-themes'));
   }
 }
@@ -969,6 +969,13 @@ function updateMatchPips() {
       pip.className = 'match-pip' + (i < wins ? ' filled' : '');
       el.appendChild(pip);
     }
+    const remaining = winsNeeded - wins;
+    if (remaining > 0 && !gameState.gameOver) {
+      const need = document.createElement('div');
+      need.className = 'match-need';
+      need.textContent = `need ${remaining} more`;
+      el.appendChild(need);
+    }
   });
 }
 
@@ -995,6 +1002,7 @@ function handleClick(i) {
   if (gameState.gameOver || board[i] || aiThinking || chaosState.lagActive) return;
   if (aiMode && currentPlayer === HINDU) return;
   if (chaosMode && chaosHas('holy-ground') && chaosState.holyCell === i) {
+    sfxChaos('holy-ground');
     showChaosEvent('⛪ HOLY GROUND! That sacred cell is divinely forbidden!', 1600);
     return;
   }
@@ -1035,6 +1043,7 @@ function handleClick(i) {
         actualI  = empty[randInt(empty.length)];
         board[actualI] = currentPlayer;
         lastPlacedCell = actualI;
+        sfxChaos('wild-turn');
         showChaosEvent('🎲 WILD TURN! The gods have rerouted your piece to a random square!');
         triggerCellShake(actualI);
       }
@@ -1051,6 +1060,7 @@ function handleClick(i) {
       const target = oppCells[randInt(oppCells.length)];
       board[target] = null;
       if (chaosState.ghostCell === target) chaosState.ghostCell = -1;
+      sfxChaos('smite');
       showChaosEvent(`⚡ SMITE! A divine bolt obliterates ${currentTheme.players[opp].name}'s piece!`);
       triggerSolarFlare();
     }
@@ -1066,6 +1076,7 @@ function handleClick(i) {
       const e = eCells[randInt(eCells.length)];
       const h = hCells[randInt(hCells.length)];
       [board[e], board[h]] = [board[h], board[e]];
+      sfxChaos('swap-souls');
       showChaosEvent('🔄 SOUL SWAP! Two pieces have switched allegiances in a moment of cosmic betrayal!');
     }
   }
@@ -1076,6 +1087,7 @@ function handleClick(i) {
     chaosState.mirror     = !chaosState.mirror;
     markChaosUsed('mirror');
     updateBoardTransform();
+    sfxChaos('mirror');
     showChaosEvent('🪞 MIRROR REALM! The board has been reflected into a parallel dimension!');
   }
 
@@ -1083,6 +1095,7 @@ function handleClick(i) {
   if (chaosMode && chaosHas('solar-flare') && !chaosState.solarUsed && Math.random() < 0.25) {
     chaosState.solarUsed = true;
     markChaosUsed('solar-flare');
+    sfxChaos('solar-flare');
     triggerSolarFlare();
     showChaosEvent('🌟 SOLAR FLARE! Blinding divine light has descended upon the battlefield!');
   }
@@ -1092,6 +1105,7 @@ function handleClick(i) {
     chaosState.lagUsed   = true;
     chaosState.lagActive = true;
     markChaosUsed('divine-lag');
+    sfxChaos('divine-lag');
     showChaosEvent('⏳ DIVINE LAG! The celestial servers are buffering... please hold...', 3300);
     setTimeout(() => { chaosState.lagActive = false; }, 3000);
   }
@@ -1101,6 +1115,7 @@ function handleClick(i) {
     chaosState.treacheryUsed = true;
     markChaosUsed('treachery');
     board[actualI] = getNextPlayer(currentPlayer);
+    sfxChaos('treachery');
     showChaosEvent(`🗡 TREACHERY! The piece betrays its master and now serves the enemy!`);
   }
 
@@ -1194,6 +1209,7 @@ function handleClick(i) {
         board.filter(v => v).length >= 2 && Math.random() < 0.18) {
       chaosState.ghostCell  = actualI;
       chaosState.ghostOwner = currentPlayer;
+      sfxChaos('ghost-move');
       showChaosEvent('👻 GHOST MOVE! A spectral piece materializes on the board... barely real!');
     }
 
@@ -1203,6 +1219,7 @@ function handleClick(i) {
       chaosState.blessingUsed = true;
       grantBlessing = true;
       markChaosUsed('blessing');
+      sfxChaos('blessing');
       showChaosEvent(`✨ BLESSING OF TWOFOLD! ${currentTheme.players[currentPlayer].name} PLAYS AGAIN!`);
     }
 
@@ -1211,6 +1228,7 @@ function handleClick(i) {
       chaosState.skipUsed = true;
       const toSkip = getNextPlayer(currentPlayer);
       chaosState.skipNext = toSkip;
+      sfxChaos('cursed-skip');
       showChaosEvent(`💀 CURSED SKIP incoming! ${currentTheme.players[toSkip].name}'s NEXT turn will vanish into darkness!`);
     }
 
@@ -1240,6 +1258,7 @@ function handleClick(i) {
 
     // ── CHAOS: Phantom Veil — pieces invisible for 1.5 s ─────────────
     if (chaosMode && chaosHas('phantom-veil')) {
+      sfxChaos('phantom-veil');
       boardEl.classList.add('phantom-veil');
       setTimeout(() => boardEl.classList.remove('phantom-veil'), 1500);
     }

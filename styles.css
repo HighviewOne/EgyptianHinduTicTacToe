@@ -942,6 +942,7 @@ header {
   background: var(--hindu-saffron);
   box-shadow: 0 0 6px rgba(var(--p2-rgb),.7);
 }
+.match-need { font-size: .52rem; letter-spacing: .06em; color: rgba(255,255,255,.32); margin-top: 3px; }
 
 /* ── Match victory overlay ── */
 .match-victory {

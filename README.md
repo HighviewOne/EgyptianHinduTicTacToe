@@ -16,6 +16,7 @@ Four named themes, each with unique symbols, colors, music, win messages, quips,
 | ☥ Egypt vs India | Egypt ☥ | India ॐ | Golden desert meets cosmic lotus |
 | ✕ X vs O | X | O | Clean, ruthless geometry |
 | ⚡ Greek vs Norse | Greece ⚡ | Norse ⚔️ | Olympus vs Asgard |
+| 🐉 Dragon vs Phoenix | Dragon 龍 | Phoenix 鳳 | Chinese pentatonic mythology |
 | ⚔ Samurai vs Ninja | Samurai ⛩ | Ninja 🥷 | Honor vs shadow |
 
 ### Lore & Quips
