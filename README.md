@@ -7,9 +7,10 @@
 ![PWA](https://img.shields.io/badge/PWA-5A0FC8?style=flat-square&logo=pwa&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
 ![Tests](https://img.shields.io/badge/Tests-29%20passing-brightgreen?style=flat-square)
+![Achievements](https://img.shields.io/badge/Achievements-18-gold?style=flat-square)
 ![GitHub Pages](https://img.shields.io/badge/Deployed-GitHub%20Pages-blue?style=flat-square&logo=github)
 
-A fully-featured browser Tic-Tac-Toe game with **cinematic cultural themes**, a **strategic minimax AI**, **13 Chaos rules**, **procedural Web Audio music**, **17 achievements**, and a full progression system — built in vanilla HTML / CSS / JS with zero dependencies.
+A fully-featured browser Tic-Tac-Toe game with **cinematic cultural themes**, a **strategic minimax AI**, **13 Chaos rules**, **procedural Web Audio music**, **18 achievements**, and a full progression system — built in vanilla HTML / CSS / JS with zero dependencies.
 
 **[▶ Play Live](https://highviewone.github.io/EgyptianHinduTicTacToe/)** · Installable PWA · Works offline
 
@@ -148,6 +149,7 @@ Select **Best of 3 / 5 / 7** from the Match row. Pip indicators on each player c
 | 💨 Lightning Strike | Win in the minimum 5 moves |
 | 🌙 Night Owl | Play between 22:00 and 04:00 |
 | 🎯 Pure Intuition | Win a game without ever using the Hint button |
+| ⭐ Perfect Execution | Win a game making only optimal moves |
 
 ---
 

@@ -922,6 +922,65 @@ header {
   to   { transform: scale(1);  opacity: 1; }
 }
 
+/* Chaos gear button (inside the bar) */
+.chaos-gear-btn {
+  background: none;
+  border: 1px solid rgba(255,200,0,.18);
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  font-size: .72rem;
+  cursor: pointer;
+  color: rgba(255,220,100,.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: color .2s, border-color .2s;
+  flex-shrink: 0;
+}
+.chaos-gear-btn:hover { color: rgba(255,220,100,.9); border-color: rgba(255,200,0,.45); }
+
+/* Chaos rule picker panel */
+.chaos-config-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  padding: 10px 12px;
+  background: rgba(0,0,0,.35);
+  border: 1px solid rgba(255,200,0,.14);
+  border-radius: 12px;
+  margin-top: -4px;
+  margin-bottom: 4px;
+}
+.chaos-config-title {
+  width: 100%;
+  text-align: center;
+  font-size: .6rem;
+  letter-spacing: .1em;
+  color: rgba(255,220,100,.4);
+  text-transform: uppercase;
+  font-family: 'Cinzel', serif;
+  margin-bottom: 2px;
+}
+.chaos-rule-toggle {
+  font-size: .63rem;
+  padding: 3px 9px;
+  border-radius: 20px;
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.04);
+  color: rgba(255,255,255,.28);
+  transition: all .18s;
+}
+.chaos-rule-toggle.on {
+  background: rgba(255,200,0,.14);
+  border-color: rgba(255,200,0,.35);
+  color: rgba(255,220,100,.85);
+}
+.chaos-rule-toggle:hover { opacity: .85; }
+
 /* Chaos overlay */
 .chaos-overlay {
   position: fixed;

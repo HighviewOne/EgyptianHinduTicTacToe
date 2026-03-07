@@ -342,6 +342,7 @@ const ACHIEVEMENTS = [
   { id: 'pure-intuition',icon:'🎯',  name: 'Pure Intuition',    desc: 'Win a game without ever using the Hint button' },
   { id: 'chaos-champ',  icon: '🌪',  name: 'Chaos Champion',    desc: 'Win a round with all 3 chaos rules active' },
   { id: 'comeback',     icon: '🔄',  name: 'Comeback King',     desc: 'Win a match after trailing 0 wins to your opponent\'s 2+' },
+  { id: 'perfect-game',icon: '⭐',  name: 'Perfect Execution', desc: 'Win a game making only optimal moves' },
 ];
 
 /* ── All-time stats localStorage key ── */

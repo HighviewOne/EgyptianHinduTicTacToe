@@ -244,6 +244,9 @@ function checkAchievements(winner) {
     if (!hintUsedThisGame) tryUnlock('pure-intuition');
     if (chaosMode && activeChaosRules.length >= 3) tryUnlock('chaos-champ');
     if (trailedInMatch && matchTarget >= 5 && gameState.scores[winner] >= Math.ceil(matchTarget / 2)) tryUnlock('comeback');
+    // Perfect game: all of the winner's moves were optimal
+    const winnerMoves = moveLog.filter(m => m.player === winner);
+    if (winnerMoves.length >= 3 && winnerMoves.every(m => m.quality === 'best')) tryUnlock('perfect-game');
   }
 }
 
@@ -313,6 +316,8 @@ let timerLeft    = 15;
 let chaosMode        = false;
 let chaosShowing     = false;
 let activeChaosRules = [];
+// IDs of chaos rules eligible for selection (default: all)
+let chaosEnabled     = new Set(CHAOS_RULES.map(r => r.id));
 let chaosState       = {
   ghostCell: -1, ghostOwner: null,
   wildUsed: false, swapUsed: false, smiteUsed: false,
@@ -795,9 +800,10 @@ function randInt(n)    { return Math.floor(Math.random() * n); }
 function chaosHas(id)  { return activeChaosRules.some(r => r.id === id); }
 
 function pickChaosRules() {
-  const n        = 1 + randInt(3); // 1, 2, or 3 rules
-  const shuffled = [...CHAOS_RULES].sort(() => Math.random() - .5);
-  return shuffled.slice(0, n);
+  const eligible = CHAOS_RULES.filter(r => chaosEnabled.has(r.id));
+  if (!eligible.length) return CHAOS_RULES.slice(0, 1); // fallback: never empty
+  const n        = Math.min(1 + randInt(3), eligible.length);
+  return [...eligible].sort(() => Math.random() - .5).slice(0, n);
 }
 
 function initChaosState() {
@@ -822,15 +828,75 @@ function updateBoardTransform() {
 function updateChaosBar() {
   const bar = document.getElementById('chaos-bar');
   bar.innerHTML = '';
-  if (!chaosMode || !activeChaosRules.length) { bar.classList.remove('active'); return; }
+  if (!chaosMode) { bar.classList.remove('active'); return; }
   bar.classList.add('active');
-  activeChaosRules.forEach(rule => {
-    const chip = document.createElement('div');
-    chip.className  = 'chaos-rule-chip';
-    chip.id         = `chaos-chip-${rule.id}`;
-    chip.textContent = `${rule.icon} ${rule.name}`;
-    bar.appendChild(chip);
+  if (activeChaosRules.length) {
+    activeChaosRules.forEach(rule => {
+      const chip = document.createElement('div');
+      chip.className   = 'chaos-rule-chip';
+      chip.id          = `chaos-chip-${rule.id}`;
+      chip.textContent = `${rule.icon} ${rule.name}`;
+      bar.appendChild(chip);
+    });
+  }
+  // Config gear
+  const gear = document.createElement('button');
+  gear.className   = 'chaos-gear-btn';
+  gear.textContent = '⚙';
+  gear.title       = 'Customize chaos rules';
+  gear.addEventListener('click', toggleChaosConfig);
+  bar.appendChild(gear);
+}
+
+function renderChaosConfig() {
+  const panel = document.getElementById('chaos-config-panel');
+  panel.innerHTML = '<div class="chaos-config-title">Select eligible rules</div>' +
+    CHAOS_RULES.map(r =>
+      `<button class="chaos-rule-toggle ${chaosEnabled.has(r.id) ? 'on' : ''}" data-id="${r.id}" title="${r.desc}">
+        ${r.icon} ${r.name}
+      </button>`
+    ).join('');
+  panel.querySelectorAll('.chaos-rule-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.id;
+      if (chaosEnabled.has(id)) {
+        if (chaosEnabled.size > 3) { // require at least 3 eligible rules
+          chaosEnabled.delete(id);
+          btn.classList.remove('on');
+        }
+      } else {
+        chaosEnabled.add(id);
+        btn.classList.add('on');
+      }
+      saveChaosConfig();
+    });
   });
+}
+
+function toggleChaosConfig() {
+  const panel = document.getElementById('chaos-config-panel');
+  const open  = panel.style.display !== 'none';
+  if (open) {
+    panel.style.display = 'none';
+  } else {
+    renderChaosConfig();
+    panel.style.display = '';
+  }
+}
+
+function saveChaosConfig() {
+  try {
+    const prefs = JSON.parse(localStorage.getItem('ehttt') || '{}');
+    prefs.chaosRules = [...chaosEnabled];
+    localStorage.setItem('ehttt', JSON.stringify(prefs));
+  } catch (_) {}
+}
+
+function loadChaosConfig(prefs) {
+  if (Array.isArray(prefs.chaosRules) && prefs.chaosRules.length >= 3) {
+    chaosEnabled = new Set(prefs.chaosRules.filter(id => CHAOS_RULES.some(r => r.id === id)));
+    if (chaosEnabled.size < 3) chaosEnabled = new Set(CHAOS_RULES.map(r => r.id)); // safety
+  }
 }
 
 function markChaosUsed(id) {
@@ -1516,8 +1582,11 @@ function handleClick(i) {
       }
     }
     updateUndoBtn();
-    // Spectator auto-restart (skip if tournament match victory is about to show)
-    if (spectatorMode && !matchTarget) {
+    // Spectator auto-restart — skip if a match-victory overlay is about to show;
+    // in that case the mv-btn handler triggers the restart instead.
+    const matchOver = result.winner !== 'draw' && matchTarget &&
+      gameState.scores[result.winner] >= Math.ceil(matchTarget / 2);
+    if (spectatorMode && !matchOver) {
       setTimeout(() => { if (spectatorMode) newRound(); }, 2800);
     }
   } else {
@@ -1731,6 +1800,7 @@ function loadPrefs() {
     if (p.cosmic) { cosmicMode    = true; document.getElementById('btn-cosmic').classList.add('active'); }
     if (p.sand)   { sandstormMode = true; document.getElementById('btn-sandstorm').classList.add('active'); }
     if (p.chaos)  { chaosMode     = true; document.getElementById('btn-chaos').classList.add('active'); }
+    loadChaosConfig(p);
     if (p.match != null) {
       matchTarget = p.match;
       document.querySelectorAll('.match-btn').forEach(b => {
@@ -1772,6 +1842,7 @@ document.addEventListener('keydown', e => {
     document.getElementById('shortcut-help').classList.remove('visible');
     document.getElementById('analysis-modal').classList.remove('visible');
     document.getElementById('achievements-modal').classList.remove('visible');
+    document.getElementById('chaos-config-panel').style.display = 'none';
     return;
   }
   // ? opens shortcut help (works even during intro/chaos)
@@ -1839,6 +1910,7 @@ document.getElementById('btn-chaos').addEventListener('click', () => {
     initChaosState();
     updateChaosBar();
     updateBoardTransform();
+    document.getElementById('chaos-config-panel').style.display = 'none';
   }
   savePrefs();
   newRound();
@@ -1904,7 +1976,7 @@ document.getElementById('lore-modal').addEventListener('click', e => {
 
 document.getElementById('mv-btn').addEventListener('click', () => {
   document.getElementById('match-victory').classList.remove('visible');
-  resetScores();
+  resetScores(); // resetScores → newRound → scheduleSpectatorAI if spectatorMode
 });
 
 // Spectator / Demo mode
