@@ -168,10 +168,32 @@ function sfxWin(player, themeKey) {
   }
 }
 
-function sfxDraw() {
-  [440, 370, 330].forEach((f, i) => {
-    note(f, 'sine', 0.2, 0.01, 0.4, i * 0.15);
-  });
+function sfxDraw(themeKey) {
+  switch (themeKey) {
+    case 'classic':
+      // neutral digital chord resolution
+      [523.25, 440, 392].forEach((f, i) => note(f, 'sine', 0.15, 0.01, 0.35, i * 0.14));
+      break;
+    case 'greek-norse':
+      // deep rumbling fade
+      [130.81, 110, 98].forEach((f, i) => note(f, 'triangle', 0.22, 0.02, 0.55, i * 0.18));
+      break;
+    case 'dragon-phoenix':
+      // hovering pentatonic stasis
+      [329.63, 293.66, 261.63].forEach((f, i) => note(f, 'sine', 0.18, 0.02, 0.6, i * 0.2));
+      break;
+    case 'samurai-ninja':
+      // single dissonant clash resolving to silence
+      note(493.88, 'triangle', 0.25, 0.002, 0.25);
+      note(466.16, 'triangle', 0.18, 0.002, 0.35, 0.03);
+      break;
+    default: // egypt-hindu + random
+      [440, 370, 330].forEach((f, i) => note(f, 'sine', 0.2, 0.01, 0.4, i * 0.15));
+  }
+}
+
+function sfxTimerTick() {
+  note(1200, 'square', 0.06, 0.003, 0.06);
 }
 
 function sfxChaos(id) {

@@ -157,6 +157,22 @@ function updateAllTimeStats(outcome) {
     }
   }
   updateRankBadges();
+  // Score milestone toasts (total wins ever, both players combined)
+  if (outcome !== 'draw') {
+    const totalWins = (s.egypt || 0) + (s.hindu || 0);
+    const prevTotal = totalWins - 1;
+    const _milestones = {
+      5:  '🏆 5 Victories! The Ancient Game Begins!',
+      10: '🔥 10 Victories! A True Warrior Rises!',
+      25: '⭐ 25 Victories! Legend Status Achieved!',
+      50: '👑 50 Victories! You Are Mythic!',
+      100:'✨ 100 Victories! The Gods Take Notice!',
+    };
+    Object.entries(_milestones).forEach(([n, msg]) => {
+      if (prevTotal < +n && totalWins >= +n)
+        setTimeout(() => showChaosEvent(msg, 3500), 2500);
+    });
+  }
 }
 function showStatsModal() {
   // Clear previously-inserted dynamic sections to prevent duplication on re-open
@@ -1035,6 +1051,7 @@ function startTimer() {
   timerInterval = setInterval(() => {
     timerLeft--;
     if (timerLeft <= Math.min(5, Math.floor(SECS / 3))) fill.classList.add('urgent');
+    if (timerLeft > 0 && timerLeft <= 3) sfxTimerTick();
     if (timerLeft <= 0) { clearTimer(); onTimerExpire(); }
   }, 1000);
 }
@@ -1590,10 +1607,11 @@ function handleClick(i) {
   const _WIN_LINES = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
   // Count how many cells of a line a given player owns (excluding nulls)
   function _lineCount(b, player, line) { return line.filter(c => b[c] === player).length; }
-  // Does player have 2 in a line with the third empty?
-  function _hasThreaten(b, player) {
-    return _WIN_LINES.some(l => _lineCount(b, player, l) === 2 && l.some(c => !b[c]));
+  // Count active threats (2-in-line with empty third)
+  function _threatCount(b, player) {
+    return _WIN_LINES.filter(l => _lineCount(b, player, l) === 2 && l.some(c => !b[c])).length;
   }
+  function _hasThreaten(b, player) { return _threatCount(b, player) >= 1; }
 
   if (_preCount === 0) {
     const _opening = _clickedI === 4 ? '⚔ Center Gambit'
@@ -1616,15 +1634,17 @@ function handleClick(i) {
     } else if (_hasThreaten(_boardNow, currentPlayer)) {
       setTimeout(() => showChaosEvent('🎯 Line Pressure!', 1800), 350);
     }
-  } else if (_preCount >= 4) {
-    // Mid-game: detect match point (player 1 win away) or block
-    const _boardNow = [..._snapForBadge]; _boardNow[_clickedI] = currentPlayer;
+  } else if (_preCount >= 3) {
+    // Mid/late game: detect fork, block, or match point
+    const _boardNow  = [..._snapForBadge]; _boardNow[_clickedI] = currentPlayer;
     const _blockMove = _WIN_LINES.some(l => _lineCount(_snapForBadge, _opponent, l) === 2
                        && l.includes(_clickedI) && !_snapForBadge[_clickedI]);
-    const _threatNow = _hasThreaten(_boardNow, currentPlayer);
-    if (_blockMove) {
+    const _forks     = _threatCount(_boardNow, currentPlayer);
+    if (_forks >= 2) {
+      setTimeout(() => showChaosEvent('⚡ FORK! Two Threats — Unblockable!', 2400), 350);
+    } else if (_blockMove) {
       setTimeout(() => showChaosEvent('🛡 Crisis Averted! Block!', 1800), 350);
-    } else if (_threatNow && _preCount === 4) {
+    } else if (_forks === 1 && _preCount <= 4) {
       setTimeout(() => showChaosEvent('⚡ Match Point!', 1800), 350);
     }
   }
@@ -1644,7 +1664,7 @@ function handleClick(i) {
     checkLorePopup();
 
     if (result.winner === 'draw') {
-      sfxDraw();
+      sfxDraw(currentThemeKey);
       gameState.scores.draws++;
       drawsEl.textContent  = gameState.scores.draws;
       gameState.lastWinner = null;
