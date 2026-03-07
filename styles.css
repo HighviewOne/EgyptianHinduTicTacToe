@@ -1228,6 +1228,20 @@ header {
 }
 .match-need { font-size: .52rem; letter-spacing: .06em; color: rgba(255,255,255,.32); margin-top: 3px; }
 
+/* Match-point state — player card throbs when one win away */
+@keyframes matchPointPulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(var(--p1-rgb), 0); }
+  50%     { box-shadow: 0 0 0 8px rgba(var(--p1-rgb), .28); }
+}
+.player-card.egypt.match-point { animation: matchPointPulse 1.4s ease-in-out infinite; }
+@keyframes matchPointPulse2 {
+  0%,100% { box-shadow: 0 0 0 0 rgba(var(--p2-rgb), 0); }
+  50%     { box-shadow: 0 0 0 8px rgba(var(--p2-rgb), .28); }
+}
+.player-card.hindu.match-point { animation: matchPointPulse2 1.4s ease-in-out infinite; }
+.player-card.match-point .match-need { color: var(--egypt-gold); font-weight: 700; letter-spacing: .1em; }
+.player-card.hindu.match-point .match-need { color: var(--hindu-saffron); }
+
 /* ── Match victory overlay ── */
 .match-victory {
   position: fixed; inset: 0; background: rgba(0,0,0,.88);
@@ -1383,6 +1397,10 @@ header {
 .log-turn { color: rgba(255,255,255,.3); font-size: .58rem; min-width: 14px; }
 .log-sym  { font-size: .72rem; }
 .log-pos  { font-family: monospace; font-size: .62rem; }
+.log-badge { font-size: .55rem; font-weight: 700; opacity: .8; }
+.log-badge.quality-best    { color: #6fcf97; }
+.log-badge.quality-fine    { color: rgba(255,255,255,.4); }
+.log-badge.quality-blunder { color: #eb5757; }
 .log-empty { font-size: .62rem; color: rgba(255,255,255,.25); font-style: italic; }
 .btn-log.on { background: rgba(var(--p1-rgb),.2); border-color: rgba(var(--p1-rgb),.4); color: var(--egypt-sand); }
 
@@ -1436,8 +1454,8 @@ header {
   background: rgba(255,255,255,.06);
 }
 .eval-fill { height: 100%; transition: width .55s cubic-bezier(.4,0,.2,1); }
-.eval-egypt { background: linear-gradient(90deg, var(--egypt-gold), rgba(212,160,23,.7)); border-radius: 2px 0 0 2px; }
-.eval-hindu { background: linear-gradient(90deg, rgba(255,153,51,.7), var(--hindu-saffron)); border-radius: 0 2px 2px 0; }
+.eval-egypt { background: linear-gradient(90deg, rgba(var(--p1-rgb),1), rgba(var(--p1-rgb),.55)); border-radius: 2px 0 0 2px; }
+.eval-hindu { background: linear-gradient(90deg, rgba(var(--p2-rgb),.55), rgba(var(--p2-rgb),1)); border-radius: 0 2px 2px 0; }
 
 /* ── Chaos: Holy Ground — blocked sacred cell ── */
 .cell.holy-cell { cursor: not-allowed !important; background: rgba(255,215,0,.06) !important; border-color: rgba(255,215,0,.35) !important; }

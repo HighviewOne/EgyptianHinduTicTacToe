@@ -85,6 +85,24 @@ function loadAllTimeStats() {
 function saveAllTimeStats(s) {
   try { localStorage.setItem(STATS_KEY, JSON.stringify(s)); } catch (_) {}
 }
+/* ─────────────────────────────────────────────
+   Win-line name — called after a win to briefly
+   describe how the game was decided.
+───────────────────────────────────────────── */
+const WIN_LINE_NAMES = {
+  '0,1,2': '⬛ Top Row',
+  '3,4,5': '⬛ Middle Row',
+  '6,7,8': '⬛ Bottom Row',
+  '0,3,6': '| Left Column',
+  '1,4,7': '| Centre Column',
+  '2,5,8': '| Right Column',
+  '0,4,8': '↘ Main Diagonal',
+  '2,4,6': '↙ Anti Diagonal',
+};
+function getWinLineName(cells) {
+  return WIN_LINE_NAMES[(cells || []).join(',')] || '';
+}
+
 function getRank(wins) {
   if (wins >= 50) return { label: '★ Legend',       color: '#FF4444' };
   if (wins >= 30) return { label: '◆ Grand Master',  color: '#CF9FFF' };
@@ -116,6 +134,14 @@ function updateAllTimeStats(outcome) {
   if (!s.recentGames) s.recentGames = [];
   s.recentGames.push(outcome);
   if (s.recentGames.length > 10) s.recentGames.shift();
+  // Per-theme stats (exclude the procedural 'random' key)
+  if (currentThemeKey !== 'random') {
+    if (!s.themes) s.themes = {};
+    if (!s.themes[currentThemeKey]) s.themes[currentThemeKey] = { wins: 0, draws: 0, games: 0 };
+    s.themes[currentThemeKey].games++;
+    if (outcome === 'draw') s.themes[currentThemeKey].draws++;
+    else                    s.themes[currentThemeKey].wins++;
+  }
   saveAllTimeStats(s);
   // Rank-up announcements
   if (outcome !== 'draw') {
@@ -132,7 +158,7 @@ function updateAllTimeStats(outcome) {
 }
 function showStatsModal() {
   // Clear previously-inserted dynamic sections to prevent duplication on re-open
-  document.querySelectorAll('.recent-games, .heat-section').forEach(el => el.remove());
+  document.querySelectorAll('.recent-games, .heat-section, .theme-stats-section').forEach(el => el.remove());
   const s  = loadAllTimeStats();
   const p1 = currentTheme.players.egypt;
   const p2 = currentTheme.players.hindu;
@@ -163,13 +189,31 @@ function showStatsModal() {
   const maxF = Math.max(...freq, 1);
   const heatCells = freq.map((f, idx) => {
     const heat = f / maxF;
-    const bg = `rgba(212,160,23,${(heat * 0.72).toFixed(2)})`;
+    const bg = `rgba(var(--p1-rgb),${(heat * 0.72).toFixed(2)})`;
     return `<div class="heat-cell" style="background:${bg}" title="Position ${idx+1}: ${f} play${f!==1?'s':''}">${f || ''}</div>`;
   }).join('');
-  document.getElementById('stats-modal').querySelector('.stats-actions').insertAdjacentHTML('beforebegin',
+  const modal = document.getElementById('stats-modal');
+  modal.querySelector('.stats-actions').insertAdjacentHTML('beforebegin',
     `<div class="heat-section"><div class="heat-title">CELL HOT SPOTS</div><div class="heat-grid">${heatCells}</div></div>`
   );
-  document.getElementById('stats-modal').classList.add('visible');
+  // Per-theme win rates
+  const themeData = s.themes || {};
+  const themeKeys = Object.keys(themeData).filter(k => THEMES[k]);
+  if (themeKeys.length) {
+    const rows = themeKeys.map(k => {
+      const td   = themeData[k];
+      const rate = td.games ? Math.round(td.wins / td.games * 100) : 0;
+      return `<div class="theme-stat-row">
+        <span class="theme-stat-name">${THEMES[k].label}</span>
+        <div class="theme-stat-bar"><div class="theme-stat-fill" style="width:${rate}%"></div></div>
+        <span class="theme-stat-pct">${rate}%</span>
+      </div>`;
+    }).join('');
+    modal.querySelector('.stats-actions').insertAdjacentHTML('beforebegin',
+      `<div class="theme-stats-section"><div class="theme-stats-title">WIN RATE BY THEME</div>${rows}</div>`
+    );
+  }
+  modal.classList.add('visible');
 }
 function resetAllTimeStats() {
 
@@ -650,8 +694,9 @@ function updateMoveLog() {
   const body = document.getElementById('move-log-body');
   if (!body) return;
   if (!moveLog.length) { body.innerHTML = '<div class="log-empty">No moves yet</div>'; return; }
+  const qIcon = { best: '✓', fine: '≈', blunder: '✗' };
   body.innerHTML = moveLog.map(m =>
-    `<div class="log-entry ${m.player}-entry"><span class="log-turn">${m.turn}</span><span class="log-sym">${SYMBOLS[m.player] || ''}</span><span class="log-pos">${m.pos}</span></div>`
+    `<div class="log-entry ${m.player}-entry"><span class="log-turn">${m.turn}</span><span class="log-sym">${SYMBOLS[m.player] || ''}</span><span class="log-pos">${m.pos}</span><span class="log-badge quality-${m.quality || 'fine'}">${qIcon[m.quality] || '≈'}</span></div>`
   ).join('');
   body.scrollTop = body.scrollHeight;
 }
@@ -1063,8 +1108,8 @@ function undo() {
   updateBoardTransform();
   clearWinLine();
   clearTimer();
-  cardEgypt.classList.remove('winner-glow');
-  cardHindu.classList.remove('winner-glow');
+  cardEgypt.classList.remove('winner-glow', 'match-point');
+  cardHindu.classList.remove('winner-glow', 'match-point');
 
   statusEl.className   = `status-text ${gameState.currentPlayer}-msg`;
   statusEl.textContent = LABELS[gameState.currentPlayer];
@@ -1320,9 +1365,12 @@ function updateMatchPips() {
     if (remaining > 0 && !gameState.gameOver) {
       const need = document.createElement('div');
       need.className = 'match-need';
-      need.textContent = `need ${remaining} more`;
+      need.textContent = remaining === 1 ? '⚡ MATCH POINT' : `need ${remaining} more`;
       el.appendChild(need);
     }
+    // Pulse the card when at match point
+    const card = document.getElementById(`card-${p}`);
+    if (card) card.classList.toggle('match-point', remaining === 1 && !gameState.gameOver && matchTarget > 0);
   });
 }
 
@@ -1499,18 +1547,48 @@ function handleClick(i) {
   });
   updateMoveLog();
 
-  // ── Opening name flash (first 3 moves) ─────────────────────────
+  // ── Opening / tactical pattern flash ────────────────────────────
   const _preCount = _snapForBadge.filter(v => v).length;
+  const _opponent  = currentPlayer === EGYPT ? HINDU : EGYPT;
+  const _WIN_LINES = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  // Count how many cells of a line a given player owns (excluding nulls)
+  function _lineCount(b, player, line) { return line.filter(c => b[c] === player).length; }
+  // Does player have 2 in a line with the third empty?
+  function _hasThreaten(b, player) {
+    return _WIN_LINES.some(l => _lineCount(b, player, l) === 2 && l.some(c => !b[c]));
+  }
+
   if (_preCount === 0) {
     const _opening = _clickedI === 4 ? '⚔ Center Gambit'
                    : [0,2,6,8].includes(_clickedI) ? '♟ Corner Opening' : '◈ Edge Play';
     setTimeout(() => showChaosEvent(_opening + '!', 1800), 350);
+  } else if (_preCount === 1) {
+    // Opponent's first response
+    const _oppFirst = _snapForBadge.indexOf(_opponent);
+    if (_oppFirst === 4 && [0,2,6,8].includes(_clickedI)) {
+      setTimeout(() => showChaosEvent('🪞 Mirror Denied — Center Claimed!', 2000), 350);
+    } else if ([0,2,6,8].includes(_oppFirst) && [0,2,6,8].includes(_clickedI)
+               && _oppFirst + _clickedI === 8) {
+      setTimeout(() => showChaosEvent('⚔ Opposite Corners — Double Threat!', 2000), 350);
+    }
   } else if (_preCount === 2) {
-    // Detect opposite-corner fork setup
     const _boardNow = [..._snapForBadge]; _boardNow[_clickedI] = currentPlayer;
     const _myCorners = [0,2,6,8].filter(c => _boardNow[c] === currentPlayer);
     if (_myCorners.length === 2 && (_myCorners[0] + _myCorners[1] === 8)) {
       setTimeout(() => showChaosEvent('⚡ Fork Setup! Danger!', 2000), 350);
+    } else if (_hasThreaten(_boardNow, currentPlayer)) {
+      setTimeout(() => showChaosEvent('🎯 Line Pressure!', 1800), 350);
+    }
+  } else if (_preCount >= 4) {
+    // Mid-game: detect match point (player 1 win away) or block
+    const _boardNow = [..._snapForBadge]; _boardNow[_clickedI] = currentPlayer;
+    const _blockMove = _WIN_LINES.some(l => _lineCount(_snapForBadge, _opponent, l) === 2
+                       && l.includes(_clickedI) && !_snapForBadge[_clickedI]);
+    const _threatNow = _hasThreaten(_boardNow, currentPlayer);
+    if (_blockMove) {
+      setTimeout(() => showChaosEvent('🛡 Crisis Averted! Block!', 1800), 350);
+    } else if (_threatNow && _preCount === 4) {
+      setTimeout(() => showChaosEvent('⚡ Match Point!', 1800), 350);
     }
   }
 
@@ -1592,6 +1670,8 @@ function handleClick(i) {
       setAura(w, true);
       drawWinLine(result.cells, w);
       burstParticles(w);
+      const _lineName = getWinLineName(result.cells);
+      if (_lineName) setTimeout(() => showChaosEvent(_lineName + '!', 2000), 750);
       updateAllTimeStats(w);
       updateMatchPips();
       updateStreakBadges();
@@ -1748,8 +1828,8 @@ function newRound() {
   initChaosState();       // reset all chaos state for the new round
   updateBoardTransform(); // clears cosmic + mirror transforms
   gameState.history = [];
-  cardEgypt.classList.remove('winner-glow');
-  cardHindu.classList.remove('winner-glow');
+  cardEgypt.classList.remove('winner-glow', 'match-point');
+  cardHindu.classList.remove('winner-glow', 'match-point');
 
   // Alternate who goes first each round so neither player is always
   // disadvantaged. The total number of completed games (wins + draws)
@@ -1909,6 +1989,16 @@ document.addEventListener('keydown', e => {
   } else if (e.code === 'KeyF' && !e.repeat) {
     if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
     else document.exitFullscreen().catch(() => {});
+  } else if (e.code === 'KeyA' && !e.repeat) {
+    if (gameState.gameOver) {
+      const am = document.getElementById('analysis-modal');
+      if (am.classList.contains('visible')) am.classList.remove('visible');
+      else showAnalysis();
+    }
+  } else if (e.code === 'KeyS' && !e.repeat) {
+    toggleSpectator();
+  } else if (e.code === 'KeyR' && !e.repeat) {
+    if (gameState.gameOver && !replaying) replayGame();
   }
 });
 
