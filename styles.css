@@ -193,6 +193,7 @@ header {
 .player-card.hindu  .player-score { color: var(--hindu-saffron); }
 
 .score-label { font-size: .58rem; letter-spacing: .2em; opacity: .5; }
+.session-rate { font-size: .52rem; color: rgba(255,255,255,.32); letter-spacing: .06em; margin-top: 2px; min-height: .8rem; }
 
 .turn-crown {
   position: absolute;
@@ -753,6 +754,34 @@ header {
   border-color: rgba(var(--p1-rgb),.4);
   box-shadow: 0 0 10px rgba(var(--p1-rgb),.15);
 }
+
+/* ── Undo shake ── */
+@keyframes undoShake {
+  0%   { transform: translateX(0); }
+  20%  { transform: translateX(-6px); }
+  45%  { transform: translateX(5px); }
+  70%  { transform: translateX(-3px); }
+  100% { transform: translateX(0); }
+}
+.board.undo-shake { animation: undoShake .38s ease-out; }
+
+/* ── Restore game banner ── */
+.restore-banner {
+  display: flex; align-items: center; gap: 10px; justify-content: center;
+  background: rgba(var(--p1-rgb), .12); border: 1px solid rgba(var(--p1-rgb), .25);
+  border-radius: 10px; padding: 10px 16px; margin: 8px auto;
+  max-width: 420px; font-size: .78rem; color: rgba(255,255,255,.75);
+  animation: statsSlideIn .35s cubic-bezier(.22,1,.36,1);
+}
+.restore-msg { flex: 1; }
+.restore-yes, .restore-no {
+  font-size: .7rem; font-weight: 700; letter-spacing: .06em;
+  border: none; border-radius: 6px; padding: 5px 12px; cursor: pointer;
+}
+.restore-yes { background: rgba(var(--p1-rgb), .3); color: var(--egypt-sand); }
+.restore-no  { background: rgba(255,255,255,.08); color: rgba(255,255,255,.5); }
+.restore-yes:hover { background: rgba(var(--p1-rgb), .5); }
+.restore-no:hover  { background: rgba(255,255,255,.14); }
 
 /* ── sandstorm shake ── */
 @keyframes sandstorm {

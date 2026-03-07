@@ -39,6 +39,7 @@
       <div class="player-lore">Keepers of sacred hieroglyphs, born of the Nile's eternal tide</div>
       <div class="player-score" id="score-egypt">0</div>
       <div class="score-label">VICTORIES</div>
+      <div class="session-rate" id="rate-egypt"></div>
       <div class="streak-badge" id="streak-egypt"></div>
       <div class="rank-badge" id="rank-egypt"></div>
       <div class="match-pips" id="pips-egypt"></div>
@@ -54,6 +55,7 @@
       <div class="player-lore">Weavers of cosmic order, guardians of the divine syllable</div>
       <div class="player-score" id="score-hindu">0</div>
       <div class="score-label">VICTORIES</div>
+      <div class="session-rate" id="rate-hindu"></div>
       <div class="streak-badge" id="streak-hindu"></div>
       <div class="rank-badge" id="rank-hindu"></div>
       <div class="match-pips" id="pips-hindu"></div>
@@ -170,6 +172,13 @@
 
   <!-- draws -->
   <div class="draws-row">Draws: <span id="draws">0</span></div>
+
+  <!-- Restore game banner -->
+  <div class="restore-banner" id="restore-banner" style="display:none">
+    <span class="restore-msg">♻ In-progress game found</span>
+    <button class="restore-yes" id="restore-yes">Restore</button>
+    <button class="restore-no"  id="restore-no">Discard</button>
+  </div>
 
   <!-- footer decoration -->
   <div class="footer-symbols">

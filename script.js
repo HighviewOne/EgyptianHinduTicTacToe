@@ -85,6 +85,82 @@ function maybeShowTip() {
 }
 
 /* ─────────────────────────────────────────────
+   Auto-save / restore mid-game
+───────────────────────────────────────────── */
+const GAME_SAVE_KEY = 'ehttt-game';
+
+function autoSaveGame() {
+  if (gameState.gameOver) { try { localStorage.removeItem(GAME_SAVE_KEY); } catch(_) {} return; }
+  try {
+    localStorage.setItem(GAME_SAVE_KEY, JSON.stringify({
+      board:         gameState.board,
+      currentPlayer: gameState.currentPlayer,
+      scores:        gameState.scores,
+      cosmicAngle:   cosmicAngle,
+      moveLog:       moveLog,
+      lastPlacedCell: lastPlacedCell,
+    }));
+  } catch(_) {}
+}
+
+function clearGameSave() {
+  try { localStorage.removeItem(GAME_SAVE_KEY); } catch(_) {}
+}
+
+function tryRestoreGame() {
+  try {
+    const raw = localStorage.getItem(GAME_SAVE_KEY);
+    if (!raw) return;
+    const g = JSON.parse(raw);
+    if (!g.board || !g.board.some(v => v)) { clearGameSave(); return; }
+    // Show restore banner
+    const banner = document.getElementById('restore-banner');
+    if (banner) banner.style.display = '';
+  } catch(_) {}
+}
+
+function applyRestore() {
+  try {
+    const g = JSON.parse(localStorage.getItem(GAME_SAVE_KEY) || 'null');
+    if (!g) return;
+    gameState.board         = g.board;
+    gameState.currentPlayer = g.currentPlayer || EGYPT;
+    gameState.scores        = g.scores || { egypt: 0, hindu: 0, draws: 0 };
+    cosmicAngle   = g.cosmicAngle || 0;
+    moveLog       = g.moveLog    || [];
+    lastPlacedCell = g.lastPlacedCell != null ? g.lastPlacedCell : -1;
+    gameState.gameOver = false;
+    clearGameSave();
+    scoreEgypt.textContent = gameState.scores.egypt;
+    scoreHindu.textContent = gameState.scores.hindu;
+    drawsEl.textContent    = gameState.scores.draws;
+    renderBoard([]);
+    updateTurnUI();
+    updateMoveLog();
+    updateUndoBtn();
+    updateBoardColor();
+    updateEvalBar(gameState.currentPlayer === HINDU);
+    updateSessionRate();
+    statusEl.className   = `status-text ${gameState.currentPlayer}-msg`;
+    statusEl.textContent = LABELS[gameState.currentPlayer];
+    showChaosEvent('♻ Game restored!', 2200);
+  } catch(_) {}
+}
+
+/* ─────────────────────────────────────────────
+   Session win-rate on player cards
+───────────────────────────────────────────── */
+function updateSessionRate() {
+  const s = gameState.scores;
+  const total = (s.egypt || 0) + (s.hindu || 0) + (s.draws || 0);
+  const rEl = document.getElementById('rate-egypt');
+  const hEl = document.getElementById('rate-hindu');
+  if (!total || !rEl || !hEl) { if (rEl) rEl.textContent = ''; if (hEl) hEl.textContent = ''; return; }
+  rEl.textContent = `${Math.round((s.egypt  || 0) / total * 100)}% win`;
+  hEl.textContent = `${Math.round((s.hindu  || 0) / total * 100)}% win`;
+}
+
+/* ─────────────────────────────────────────────
    All-time stats (localStorage)
 ───────────────────────────────────────────── */
 function loadAllTimeStats() {
@@ -1184,7 +1260,8 @@ function undo() {
   renderBoard();
   updateTurnUI();
   updateUndoBtn();
-
+  boardEl.classList.add('undo-shake');
+  setTimeout(() => boardEl.classList.remove('undo-shake'), 380);
   if (timedMode && (!aiMode || gameState.currentPlayer === EGYPT)) startTimer();
 }
 
@@ -1614,6 +1691,14 @@ function handleClick(i) {
   });
   updateMoveLog();
 
+  // ── Blunder alert (human moves only) ────────────────────────────
+  const _isAiMove = (aiMode && currentPlayer === HINDU) || spectatorMode;
+  if (_details.quality === 'blunder' && !_isAiMove) {
+    const _lastM = moveLog[moveLog.length - 1];
+    const _hint  = _lastM && _lastM.bestPos ? ` · Best: ${_lastM.bestPos}` : '';
+    setTimeout(() => showChaosEvent(`⚠ Blunder!${_hint}`, 2200), 200);
+  }
+
   // ── Floating quality badge on placed cell ───────────────────────
   const _qBadgeEl = boardEl.children[lastPlacedCell];
   if (_qBadgeEl) {
@@ -1700,6 +1785,7 @@ function handleClick(i) {
       updateAllTimeStats('draw');
       updateMatchPips();
       updateStreakBadges();
+      updateSessionRate();
       checkAchievements('draw');
       document.getElementById('btn-replay').style.display = '';
       document.getElementById('btn-hint').disabled = true;
@@ -1756,6 +1842,7 @@ function handleClick(i) {
       updateAllTimeStats(w);
       updateMatchPips();
       updateStreakBadges();
+      updateSessionRate();
       checkAchievements(w);
       document.getElementById('btn-replay').style.display = '';
       document.getElementById('btn-hint').disabled = true;
@@ -1880,6 +1967,7 @@ function handleClick(i) {
     // Start timer for the next human move
     if (!spectatorMode && (!aiMode || gameState.currentPlayer === EGYPT)) startTimer();
   }
+  autoSaveGame();
 }
 
 /* ─────────────────────────────────────────────
@@ -1889,6 +1977,7 @@ function handleClick(i) {
    session tally carries over across rounds.
 ───────────────────────────────────────────── */
 function newRound() {
+  clearGameSave();
   resetBoard();
   clearWinLine();
   clearTimer();
@@ -1954,6 +2043,8 @@ function resetScores() {
   scoreEgypt.textContent = 0;
   scoreHindu.textContent = 0;
   drawsEl.textContent    = 0;
+  updateSessionRate();
+  clearGameSave();
   newRound();
 }
 
@@ -2311,3 +2402,13 @@ if (!loadPrefs()) {
   showIntro();
 }
 updateRankBadges();
+tryRestoreGame();
+
+document.getElementById('restore-yes').addEventListener('click', () => {
+  document.getElementById('restore-banner').style.display = 'none';
+  applyRestore();
+});
+document.getElementById('restore-no').addEventListener('click', () => {
+  document.getElementById('restore-banner').style.display = 'none';
+  clearGameSave();
+});
