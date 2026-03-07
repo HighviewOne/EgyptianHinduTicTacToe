@@ -137,6 +137,7 @@
     <button class="btn btn-undo" id="btn-undo" disabled>↩ Undo</button>
     <button class="btn btn-hint" id="btn-hint" title="Show best move (H)">💡 Hint</button>
     <button class="btn btn-replay" id="btn-replay" title="Replay last game" style="display:none">▶ Replay</button>
+    <button class="btn btn-analysis" id="btn-analysis" title="Post-game move analysis" style="display:none">🔍 Analyse</button>
     <button class="btn btn-music" id="btn-music">🎵 Music</button>
     <input type="range" id="vol-slider" class="vol-slider" min="0" max="100" value="70" title="Volume">
     <button class="btn btn-reset-score" id="btn-reset">Reset Scores</button>
@@ -231,6 +232,15 @@
       <button class="btn btn-stats-reset" id="btn-stats-reset">Reset Stats</button>
       <button class="btn btn-stats-close" id="btn-stats-close">Close</button>
     </div>
+  </div>
+</div>
+
+<!-- Post-game move analysis modal -->
+<div class="analysis-modal" id="analysis-modal">
+  <div class="analysis-inner">
+    <div class="analysis-title" id="analysis-title">🔍 Move Analysis</div>
+    <div class="analysis-list" id="analysis-list"></div>
+    <button class="btn btn-analysis-close" id="btn-analysis-close">Close</button>
   </div>
 </div>
 

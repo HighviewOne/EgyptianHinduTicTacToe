@@ -1359,6 +1359,101 @@ header {
   }
 }
 
+/* ── Analysis modal ── */
+.analysis-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.75);
+  z-index: 3000;
+  align-items: center;
+  justify-content: center;
+}
+.analysis-modal.visible { display: flex; }
+.analysis-inner {
+  background: linear-gradient(145deg, #1a0f00, #2a1a08);
+  border: 1px solid rgba(212,160,23,.35);
+  border-radius: 18px;
+  padding: 28px 24px 22px;
+  max-width: 480px;
+  width: 92%;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.analysis-title {
+  font-family: 'Cinzel', serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--egypt-gold);
+  letter-spacing: .12em;
+  text-align: center;
+}
+.analysis-list {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 52vh;
+  padding-right: 4px;
+}
+.analysis-entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,.04);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: .82rem;
+}
+.analysis-turn {
+  color: rgba(255,255,255,.35);
+  min-width: 22px;
+  font-size: .75rem;
+}
+.analysis-sym {
+  font-size: 1rem;
+  min-width: 22px;
+  text-align: center;
+}
+.analysis-sym.egypt-entry { color: var(--egypt-gold); }
+.analysis-sym.hindu-entry  { color: var(--hindu-saffron); }
+.analysis-pos {
+  font-family: monospace;
+  color: rgba(255,255,255,.7);
+  min-width: 28px;
+}
+.analysis-badge {
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .72rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.analysis-badge.quality-best   { background: rgba(72,199,116,.2); color: #48C774; }
+.analysis-badge.quality-fine   { background: rgba(255,193,7,.2);  color: #FFC107; }
+.analysis-badge.quality-blunder{ background: rgba(255,56,96,.2);  color: #FF3860; }
+.analysis-best {
+  font-size: .72rem;
+  color: rgba(255,255,255,.4);
+  font-style: italic;
+  margin-left: auto;
+}
+.analysis-empty {
+  text-align: center;
+  color: rgba(255,255,255,.35);
+  padding: 20px 0;
+  font-size: .88rem;
+}
+.btn-analysis-close {
+  align-self: center;
+}
+
 /* ── AI thinking dots ── */
 @keyframes thinkDot {
   0%,80%,100% { opacity: .2; }

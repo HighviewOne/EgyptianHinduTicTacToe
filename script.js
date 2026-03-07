@@ -260,6 +260,7 @@ function initEditableNames() {
       if (!gameState.gameOver && gameState.currentPlayer === player) {
         statusEl.textContent = LABELS[player];
       }
+      savePrefs();
     });
   });
 }
@@ -479,25 +480,26 @@ function updateEvalBar(isHinduTurn) {
 /* ─────────────────────────────────────────────
    Move quality — badge (✓ / ≈ / ✗) on placed cell
 ───────────────────────────────────────────── */
-function computeMoveQuality(snap, player, moveIdx) {
+/* Returns {quality, bestIdx} in a single minimax pass over all options */
+function computeMoveDetails(snap, player, moveIdx) {
   const b = [...snap];
   const empty = b.reduce((a, v, i) => v ? a : [...a, i], []);
-  if (empty.length <= 1) return 'best'; // no real choice
+  if (empty.length <= 1) return { quality: 'best', bestIdx: moveIdx };
   const isMax = player === HINDU;
   let bestEval = isMax ? -Infinity : Infinity;
+  let bestIdx = empty[0];
   for (const idx of empty) {
     b[idx] = player;
     const val = minimax(b, !isMax, -Infinity, Infinity);
     b[idx] = null;
-    bestEval = isMax ? Math.max(bestEval, val) : Math.min(bestEval, val);
+    if (isMax ? val > bestEval : val < bestEval) { bestEval = val; bestIdx = idx; }
   }
   b[moveIdx] = player;
   const actualEval = minimax(b, !isMax, -Infinity, Infinity);
   b[moveIdx] = null;
   const delta = isMax ? (bestEval - actualEval) : (actualEval - bestEval);
-  if (delta <= 0)  return 'best';
-  if (delta < 10)  return 'fine';
-  return 'blunder';
+  const quality = delta <= 0 ? 'best' : delta < 10 ? 'fine' : 'blunder';
+  return { quality, bestIdx };
 }
 function showMoveBadge(cellIdx, quality) {
   const cells = boardEl.querySelectorAll('.cell');
@@ -611,6 +613,72 @@ function updateMoveLog() {
     `<div class="log-entry ${m.player}-entry"><span class="log-turn">${m.turn}</span><span class="log-sym">${SYMBOLS[m.player] || ''}</span><span class="log-pos">${m.pos}</span></div>`
   ).join('');
   body.scrollTop = body.scrollHeight;
+}
+
+/* ─────────────────────────────────────────────
+   Post-game move analysis
+───────────────────────────────────────────── */
+function showAnalysis() {
+  const list = document.getElementById('analysis-list');
+  if (!moveLog.length) {
+    list.innerHTML = '<div class="analysis-empty">No moves recorded.</div>';
+  } else {
+    const qIcon  = q => q === 'best' ? '✓' : q === 'fine' ? '≈' : '✗';
+    const qLabel = q => q === 'best' ? 'Optimal' : q === 'fine' ? 'Suboptimal' : 'Blunder';
+    list.innerHTML = moveLog.map(m =>
+      `<div class="analysis-entry">
+        <span class="analysis-turn">${m.turn}.</span>
+        <span class="analysis-sym ${m.player}-entry">${SYMBOLS[m.player] || ''}</span>
+        <span class="analysis-pos">${m.pos}</span>
+        <span class="analysis-badge quality-${m.quality}" title="${qLabel(m.quality)}">${qIcon(m.quality)}</span>
+        ${m.bestPos ? `<span class="analysis-best">best: ${m.bestPos}</span>` : ''}
+      </div>`
+    ).join('');
+  }
+  document.getElementById('analysis-modal').classList.add('visible');
+}
+
+/* ─────────────────────────────────────────────
+   AI personality taunts (per theme)
+───────────────────────────────────────────── */
+const AI_TAUNTS = {
+  'egypt-hindu': [
+    "The scales of Ma'at tip in my favour. Your fate is sealed. ☥",
+    "Ra himself guided that move. You cannot outrun divinity.",
+    "Even the Great Pyramid fell one stone at a time. So does your defence.",
+    "The Divine Om resonates with inevitable victory. 🪷",
+  ],
+  'classic': [
+    "Geometrically inevitable.",
+    "Your next three moves all end the same way.",
+    "The algorithm does not forgive suboptimal play.",
+    "Mathematical certainty achieved.",
+  ],
+  'greek-norse': [
+    "By Zeus's thunder, this position is mine! ⚡",
+    "Odin sacrificed an eye for wisdom. I used it to crush you. ⚔️",
+    "The Fates have already woven your defeat, mortal.",
+    "Valhalla awaits the bold — and the tactically superior.",
+  ],
+  'dragon-phoenix': [
+    "The Dragon's fire consumes all obstacles. 龍",
+    "The Phoenix rises from YOUR ashes. 🌟",
+    "Five thousand years of strategy. I remember all of it.",
+    "Ancient wisdom from the time of the Yellow Emperor.",
+  ],
+  'samurai-ninja': [
+    "Bushido demands excellence. That move was excellent. ⛩",
+    "The shadow strikes before you see it move. 🥷",
+    "My blade finds the gap in every defence.",
+    "In silence, the battle was won three moves ago.",
+  ],
+};
+
+/* ─────────────────────────────────────────────
+   Haptic feedback
+───────────────────────────────────────────── */
+function vibrate(pattern) {
+  try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (_) {}
 }
 
 /* ─────────────────────────────────────────────
@@ -1154,6 +1222,9 @@ function handleClick(i) {
     return;
   }
 
+  // Haptic feedback on placement
+  vibrate(22);
+
   // Capture board for move quality badge (before placing)
   const _snapForBadge = [...board];
   const _isHumanMove  = !aiMode || currentPlayer === EGYPT;
@@ -1256,8 +1327,16 @@ function handleClick(i) {
   // ── Record board snapshot for replay ─────────────────────────────
   gameLog.push([...board]);
 
-  // ── Move log ────────────────────────────────────────────────────
-  moveLog.push({ player: currentPlayer, pos: POS_LABELS[lastPlacedCell] || `#${lastPlacedCell}`, turn: moveLog.length + 1 });
+  // ── Move quality + move log ─────────────────────────────────────
+  const _details = computeMoveDetails(_snapForBadge, currentPlayer, _clickedI);
+  moveLog.push({
+    player:  currentPlayer,
+    pos:     POS_LABELS[lastPlacedCell] || `#${lastPlacedCell}`,
+    turn:    moveLog.length + 1,
+    quality: _details.quality,
+    bestPos: (_details.bestIdx !== _clickedI && _details.bestIdx !== lastPlacedCell)
+             ? (POS_LABELS[_details.bestIdx] || null) : null,
+  });
   updateMoveLog();
 
   // ── Opening name flash (first 3 moves) ─────────────────────────
@@ -1306,9 +1385,11 @@ function handleClick(i) {
       checkAchievements('draw');
       document.getElementById('btn-replay').style.display = '';
       document.getElementById('btn-hint').disabled = true;
+      document.getElementById('btn-analysis').style.display = '';
     } else {
       const w = result.winner;
       sfxWin(w);
+      vibrate([80, 40, 80]);
       // Track trailing condition for Comeback King achievement
       if (matchTarget >= 5) {
         const loserCur = w === EGYPT ? HINDU : EGYPT;
@@ -1356,6 +1437,7 @@ function handleClick(i) {
       checkAchievements(w);
       document.getElementById('btn-replay').style.display = '';
       document.getElementById('btn-hint').disabled = true;
+      document.getElementById('btn-analysis').style.display = '';
       if (matchTarget && gameState.scores[w] >= Math.ceil(matchTarget / 2)) {
         setTimeout(() => showMatchVictory(w), 1200);
       }
@@ -1423,10 +1505,8 @@ function handleClick(i) {
     // Move quality badge (human moves only, not on game-over)
     if (_isHumanMove) {
       const _fc = lastPlacedCell;
-      setTimeout(() => {
-        const q = computeMoveQuality(_snapForBadge, currentPlayer, _clickedI);
-        showMoveBadge(_fc, q);
-      }, 80);
+      const _q  = _details.quality;
+      setTimeout(() => showMoveBadge(_fc, _q), 80);
     }
 
     // ── CHAOS: Phantom Veil — pieces invisible for 1.5 s ─────────────
@@ -1451,6 +1531,14 @@ function handleClick(i) {
     } else {
       statusEl.className   = `status-text ${gameState.currentPlayer}-msg`;
       statusEl.textContent = nextLabel;
+    }
+
+    // AI taunt (20 % chance after AI moves, no overlap with quip)
+    if (aiMode && currentPlayer === HINDU && !spectatorMode && !quipText && Math.random() < 0.20) {
+      const taunts = AI_TAUNTS[currentThemeKey] || AI_TAUNTS['egypt-hindu'];
+      if (taunts && taunts.length) {
+        setTimeout(() => { if (!gameState.gameOver) showChaosEvent(`🤖 ${taunts[randInt(taunts.length)]}`, 2400); }, 600);
+      }
     }
 
     setAura(gameState.currentPlayer);
@@ -1483,6 +1571,7 @@ function newRound() {
   boardEl.classList.remove('game-over');
   updateStreakBadges();
   document.getElementById('btn-replay').style.display = 'none';
+  document.getElementById('btn-analysis').style.display = 'none';
   document.getElementById('btn-hint').disabled = false;
   updateEvalBar(false); // reset to neutral
   boardEl.style.filter = '';
@@ -1549,6 +1638,8 @@ function savePrefs() {
       sand:   sandstormMode,
       chaos:  chaosMode,
       match:  matchTarget,
+      name1:  document.getElementById('name-egypt').textContent.trim() || '',
+      name2:  document.getElementById('name-hindu').textContent.trim() || '',
     }));
   } catch (_) {}
 }
@@ -1583,6 +1674,9 @@ function loadPrefs() {
       document.querySelector('#card-hindu .player-title').textContent =
         p.mode === 'hard' ? 'Ancient AI' : p.mode === 'medium' ? 'Medium AI' : 'Easy AI';
     }
+    // Restore custom player names (applied after applyTheme which sets defaults)
+    if (p.name1) { const el = document.getElementById('name-egypt'); if (el) el.textContent = p.name1; }
+    if (p.name2) { const el = document.getElementById('name-hindu'); if (el) el.textContent = p.name2; }
     return true;
   } catch (_) { return false; }
 }
@@ -1599,6 +1693,7 @@ document.addEventListener('keydown', e => {
     document.getElementById('stats-modal').classList.remove('visible');
     document.getElementById('match-victory').classList.remove('visible');
     document.getElementById('shortcut-help').classList.remove('visible');
+    document.getElementById('analysis-modal').classList.remove('visible');
     return;
   }
   // ? opens shortcut help (works even during intro/chaos)
@@ -1736,6 +1831,15 @@ document.getElementById('mv-btn').addEventListener('click', () => {
 
 // Spectator / Demo mode
 document.getElementById('btn-spectator').addEventListener('click', toggleSpectator);
+
+// Post-game move analysis
+document.getElementById('btn-analysis').addEventListener('click', showAnalysis);
+document.getElementById('btn-analysis-close').addEventListener('click', () => {
+  document.getElementById('analysis-modal').classList.remove('visible');
+});
+document.getElementById('analysis-modal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.remove('visible');
+});
 
 // Move history log toggle
 document.getElementById('btn-log').addEventListener('click', () => {
