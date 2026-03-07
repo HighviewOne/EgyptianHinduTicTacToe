@@ -1401,6 +1401,26 @@ header {
 .log-badge.quality-best    { color: #6fcf97; }
 .log-badge.quality-fine    { color: rgba(255,255,255,.4); }
 .log-badge.quality-blunder { color: #eb5757; }
+
+/* ── Cell quality badge (floats off cell after placement) ── */
+.cell-quality-badge {
+  position: absolute; top: 4px; right: 5px;
+  font-size: .6rem; font-weight: 700;
+  pointer-events: none; z-index: 5;
+  animation: cellBadgeFade 1.4s ease forwards;
+}
+.cell-quality-badge.quality-best    { color: #6fcf97; }
+.cell-quality-badge.quality-fine    { color: rgba(255,255,255,.35); }
+.cell-quality-badge.quality-blunder { color: #eb5757; }
+@keyframes cellBadgeFade {
+  0%   { opacity: 1; transform: translateY(0) scale(1.2); }
+  55%  { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-10px) scale(.85); }
+}
+
+/* ── Fog of war — hidden opponent pieces ── */
+.cell.fog-hidden { color: rgba(255,255,255,.22) !important; text-shadow: none !important; font-size: 1.4rem !important; }
+.btn-fog.on { background: rgba(160,210,255,.15); border-color: rgba(160,210,255,.4); color: #a0d2ff; }
 .log-empty { font-size: .62rem; color: rgba(255,255,255,.25); font-style: italic; }
 .btn-log.on { background: rgba(var(--p1-rgb),.2); border-color: rgba(var(--p1-rgb),.4); color: var(--egypt-sand); }
 

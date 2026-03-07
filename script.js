@@ -54,6 +54,7 @@ const drawsEl    = document.getElementById('draws');
 let cosmicMode    = false;
 let cosmicAngle   = 0;
 let sandstormMode = false;
+let fogMode       = false;
 let introShowing   = false;
 let introTimer     = null;
 let lastPlacedCell = -1;   // index of most-recently placed piece (drives .fresh animation)
@@ -124,7 +125,8 @@ function updateAllTimeStats(outcome) {
   const s = loadAllTimeStats();
   const oldR1 = getRank(s.egypt || 0).label;
   const oldR2 = getRank(s.hindu || 0).label;
-  s.gamesPlayed = (s.gamesPlayed || 0) + 1;
+  s.gamesPlayed  = (s.gamesPlayed  || 0) + 1;
+  s.totalMoves   = (s.totalMoves   || 0) + moveLog.length;
   if (outcome === 'draw') {
     s.draws = (s.draws || 0) + 1;
   } else {
@@ -162,8 +164,13 @@ function showStatsModal() {
   const s  = loadAllTimeStats();
   const p1 = currentTheme.players.egypt;
   const p2 = currentTheme.players.hindu;
-  const winRate = s.gamesPlayed
+  const winRate  = s.gamesPlayed
     ? Math.round(((s.egypt || 0) / s.gamesPlayed) * 100) : 0;
+  const avgMoves = s.gamesPlayed && s.totalMoves
+    ? (s.totalMoves / s.gamesPlayed).toFixed(1) : '—';
+  const _cFreq   = s.cellFreq || Array(9).fill(0);
+  const _maxFIdx = _cFreq.indexOf(Math.max(..._cFreq));
+  const favCell  = _cFreq[_maxFIdx] > 0 ? (POS_LABELS[_maxFIdx] || `#${_maxFIdx+1}`) : '—';
   document.getElementById('stats-grid').innerHTML = `
     <div class="stat-card"><div class="stat-val">${s.gamesPlayed || 0}</div><div class="stat-lbl">GAMES PLAYED</div></div>
     <div class="stat-card"><div class="stat-val">${s.draws || 0}</div><div class="stat-lbl">DRAWS</div></div>
@@ -171,6 +178,8 @@ function showStatsModal() {
     <div class="stat-card"><div class="stat-val">${s.hindu || 0}</div><div class="stat-lbl">${p2.name.toUpperCase()} WINS</div></div>
     <div class="stat-card"><div class="stat-val">${s.longestStreak || 0}</div><div class="stat-lbl">BEST STREAK</div></div>
     <div class="stat-card"><div class="stat-val">${winRate}%</div><div class="stat-lbl">${p1.name.toUpperCase()} WIN RATE</div></div>
+    <div class="stat-card"><div class="stat-val">${avgMoves}</div><div class="stat-lbl">AVG MOVES</div></div>
+    <div class="stat-card"><div class="stat-val">${favCell}</div><div class="stat-lbl">FAV CELL</div></div>
   `;
   // Recent games row
   const afterGrid = document.getElementById('stats-grid');
@@ -462,7 +471,10 @@ function renderBoard(winCells = []) {
       val ? `${currentTheme.players[val].name} at position ${i + 1}` : `Empty position ${i + 1}`);
     if (val) {
       cell.classList.add('taken', `${val}-cell`);
-      cell.textContent = SYMBOLS[val];
+      const _fogHide = fogMode && !gameState.gameOver
+        && val !== gameState.currentPlayer;
+      cell.textContent = _fogHide ? '●' : SYMBOLS[val];
+      if (_fogHide) cell.classList.add('fog-hidden');
     }
     if (chaosMode && chaosState.ghostCell === i && val) cell.classList.add('ghost-cell');
     if (chaosMode && chaosState.holyCell === i && !val) cell.classList.add('holy-cell');
@@ -1547,6 +1559,16 @@ function handleClick(i) {
   });
   updateMoveLog();
 
+  // ── Floating quality badge on placed cell ───────────────────────
+  const _qBadgeEl = boardEl.children[lastPlacedCell];
+  if (_qBadgeEl) {
+    const _qBadge = document.createElement('span');
+    _qBadge.className = `cell-quality-badge quality-${_details.quality}`;
+    _qBadge.textContent = _details.quality === 'best' ? '✓' : _details.quality === 'fine' ? '≈' : '✗';
+    _qBadgeEl.appendChild(_qBadge);
+    setTimeout(() => _qBadge.remove(), 1400);
+  }
+
   // ── Opening / tactical pattern flash ────────────────────────────
   const _preCount = _snapForBadge.filter(v => v).length;
   const _opponent  = currentPlayer === EGYPT ? HINDU : EGYPT;
@@ -1886,6 +1908,7 @@ function savePrefs() {
       cosmic:     cosmicMode,
       sand:       sandstormMode,
       chaos:      chaosMode,
+      fog:        fogMode,
       match:      matchTarget,
       name1:      document.getElementById('name-egypt').textContent.trim() || '',
       name2:      document.getElementById('name-hindu').textContent.trim() || '',
@@ -1906,6 +1929,7 @@ function loadPrefs() {
     if (p.cosmic) { cosmicMode    = true; document.getElementById('btn-cosmic').classList.add('active'); }
     if (p.sand)   { sandstormMode = true; document.getElementById('btn-sandstorm').classList.add('active'); }
     if (p.chaos)  { chaosMode     = true; document.getElementById('btn-chaos').classList.add('active'); }
+    if (p.fog)    { fogMode       = true; document.getElementById('btn-fog').classList.add('on'); }
     loadChaosConfig(p);
     if (p.match != null) {
       matchTarget = p.match;
@@ -2035,6 +2059,13 @@ document.getElementById('btn-cosmic').addEventListener('click', () => {
 document.getElementById('btn-sandstorm').addEventListener('click', () => {
   sandstormMode = !sandstormMode;
   document.getElementById('btn-sandstorm').classList.toggle('active', sandstormMode);
+  savePrefs();
+});
+
+document.getElementById('btn-fog').addEventListener('click', () => {
+  fogMode = !fogMode;
+  document.getElementById('btn-fog').classList.toggle('on', fogMode);
+  renderBoard(gameState.lastWinCells || []);
   savePrefs();
 });
 
