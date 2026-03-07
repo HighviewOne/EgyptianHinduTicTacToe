@@ -1515,9 +1515,18 @@ header {
 .cell.hint-cell { animation: hintPulse .65s ease-in-out infinite !important; }
 
 /* ── Position evaluation bar ── */
+.eval-wrap {
+  display: flex; align-items: center; gap: 7px; justify-content: center;
+  max-width: 360px; margin: 5px auto 0;
+}
+.eval-label {
+  font-size: .6rem; font-family: 'Cinzel', serif; letter-spacing: .05em;
+  opacity: .55; min-width: 28px; text-align: center;
+  color: rgba(255,255,255,.7);
+}
 .eval-bar {
   display: flex; height: 4px; border-radius: 2px; overflow: hidden;
-  width: 100%; max-width: 340px; margin: 5px auto 0;
+  flex: 1; max-width: 280px;
   background: rgba(255,255,255,.06);
 }
 .eval-fill { height: 100%; transition: width .55s cubic-bezier(.4,0,.2,1); }

@@ -71,8 +71,9 @@ let gameLog   = [];   // Array of board snapshots after each move
 let replaying = false;
 let hintUsedThisGame  = false;   // true once showHint() fires this round
 let trailedInMatch    = false;   // true once opponent had 2+ wins while player had 0
-let spectatorMode = false;       // AI vs AI demo mode
-let _prevAiMode   = null;        // aiMode saved before spectator starts
+let spectatorMode  = false;       // AI vs AI demo mode
+let _prevAiMode    = null;        // aiMode saved before spectator starts
+let spectatorDelay = 2800;        // ms between auto-rounds in demo mode
 let moveLog  = [];               // [{player, pos, turn}] per-round move history
 let chaosLog = [];               // [{icon, name}] chaos events that fired this round
 const POS_LABELS = ['A1','B1','C1','A2','B2','C2','A3','B3','C3'];
@@ -669,15 +670,24 @@ function clearWinLine() {
    Position evaluation bar (minimax score → bar)
 ───────────────────────────────────────────── */
 function updateEvalBar(isHinduTurn) {
-  const eEl = document.getElementById('eval-egypt');
-  const hEl = document.getElementById('eval-hindu');
+  const eEl  = document.getElementById('eval-egypt');
+  const hEl  = document.getElementById('eval-hindu');
+  const pE   = document.getElementById('eval-pct-egypt');
+  const pH   = document.getElementById('eval-pct-hindu');
   if (!eEl || !hEl) return;
-  if (gameState.board.every(v => !v)) { eEl.style.width = '50%'; hEl.style.width = '50%'; return; }
+  if (gameState.board.every(v => !v)) {
+    eEl.style.width = '50%'; hEl.style.width = '50%';
+    if (pE) pE.textContent = '50%';
+    if (pH) pH.textContent = '50%';
+    return;
+  }
   const score = minimax([...gameState.board], isHinduTurn, -Infinity, Infinity);
   // +10 = HINDU wins, -10 = EGYPT wins → hinduPct in [0,100]
   const hinduPct = Math.round((score + 10) / 20 * 100);
   eEl.style.width = `${100 - hinduPct}%`;
   hEl.style.width = `${hinduPct}%`;
+  if (pE) pE.textContent = `${100 - hinduPct}%`;
+  if (pH) pH.textContent = `${hinduPct}%`;
 }
 
 /* ─────────────────────────────────────────────
@@ -779,7 +789,8 @@ function scheduleSpectatorAI() {
   const p = currentTheme.players.egypt;
   statusEl.className = 'status-text egypt-msg';
   statusEl.innerHTML = `${p.name} ponders<span class="thinking-dots"><span>.</span><span>.</span><span>.</span></span>`;
-  const delay = 480 + Math.random() * 520;
+  const _speedScale = spectatorDelay / 2800;
+  const delay = (480 + Math.random() * 520) * _speedScale;
   const snapBoard = [...gameState.board];
   setTimeout(() => {
     if (!spectatorMode || gameState.currentPlayer !== EGYPT || gameState.gameOver) {
@@ -795,18 +806,21 @@ function scheduleSpectatorAI() {
 
 function toggleSpectator() {
   spectatorMode = !spectatorMode;
-  const btn = document.getElementById('btn-spectator');
+  const btn       = document.getElementById('btn-spectator');
+  const speedSel  = document.getElementById('spectator-speed');
   if (spectatorMode) {
     _prevAiMode = aiMode;
     aiMode = 'hard';  // HINDU will auto-play via existing scheduleAI()
     btn.textContent = '⏹ Stop';
     btn.classList.add('on');
+    if (speedSel) speedSel.style.display = '';
     showChaosEvent('👁 AI Demo — sit back and watch!', 2800);
     newRound();
   } else {
     aiMode = _prevAiMode;
     btn.textContent = '👁 Demo';
     btn.classList.remove('on');
+    if (speedSel) speedSel.style.display = 'none';
     // Restore mode-button UI
     document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(aiMode ? `mode-${aiMode}` : 'mode-2p').classList.add('active');
@@ -1859,7 +1873,7 @@ function handleClick(i) {
     const matchOver = result.winner !== 'draw' && matchTarget &&
       gameState.scores[result.winner] >= Math.ceil(matchTarget / 2);
     if (spectatorMode && !matchOver) {
-      setTimeout(() => { if (spectatorMode) newRound(); }, 2800);
+      setTimeout(() => { if (spectatorMode) newRound(); }, spectatorDelay);
     }
   } else {
     // ── Turn switching ────────────────────────────────────────────────
@@ -2326,6 +2340,9 @@ document.getElementById('mv-btn').addEventListener('click', () => {
 
 // Spectator / Demo mode
 document.getElementById('btn-spectator').addEventListener('click', toggleSpectator);
+document.getElementById('spectator-speed').addEventListener('change', e => {
+  spectatorDelay = +e.target.value;
+});
 
 // Achievements gallery
 document.getElementById('btn-achievements').addEventListener('click', showAchievementsModal);
@@ -2364,6 +2381,62 @@ document.addEventListener('fullscreenchange', () => {
   document.getElementById('btn-fullscreen').textContent =
     document.fullscreenElement ? '✕ Exit Full' : '⛶ Full';
 });
+
+/* ─────────────────────────────────────────────
+   Copy move list to clipboard
+───────────────────────────────────────────── */
+function copyMoves() {
+  const btn = document.getElementById('btn-copy-moves');
+  if (!moveLog.length) {
+    if (btn) { btn.textContent = '✗ No moves'; setTimeout(() => btn.textContent = '📋 Moves', 1600); }
+    return;
+  }
+  const qIcon = { best: '✓', fine: '·', blunder: '✗' };
+  const lines = moveLog.map(m =>
+    `${String(m.turn).padStart(2)}. ${SYMBOLS[m.player] || m.player}  ${m.pos.padEnd(2)}  ${qIcon[m.quality] || '·'}`
+  );
+  const header = `${currentTheme.players.egypt.name} vs ${currentTheme.players.hindu.name}`;
+  const text   = `${header}\n${lines.join('\n')}`;
+  const done = () => {
+    if (btn) { btn.textContent = '✓ Copied!'; setTimeout(() => btn.textContent = '📋 Moves', 1800); }
+  };
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(done).catch(() => {
+      _fallbackCopy(text); done();
+    });
+  } else { _fallbackCopy(text); done(); }
+}
+function _fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+}
+document.getElementById('btn-copy-moves').addEventListener('click', copyMoves);
+
+/* ─────────────────────────────────────────────
+   Touch swipe gestures
+   Left → undo  |  Right → new round  |  Down → music toggle
+───────────────────────────────────────────── */
+let _swipeX = 0, _swipeY = 0;
+document.body.addEventListener('touchstart', e => {
+  _swipeX = e.changedTouches[0].clientX;
+  _swipeY = e.changedTouches[0].clientY;
+}, { passive: true });
+document.body.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - _swipeX;
+  const dy = e.changedTouches[0].clientY - _swipeY;
+  const adx = Math.abs(dx), ady = Math.abs(dy);
+  if (adx < 55 && ady < 55) return; // too short
+  // ignore swipes that originate on interactive elements
+  const tag = (e.target || {}).tagName;
+  if (/INPUT|SELECT|BUTTON/.test(tag)) return;
+  if (adx > ady) {
+    if (dx < 0) undo();       // swipe left → undo
+    else        newRound();   // swipe right → new round
+  } else {
+    if (dy > 0) toggleMusic(); // swipe down → music
+  }
+}, { passive: true });
 
 /* ─────────────────────────────────────────────
    PWA Install prompt

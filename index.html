@@ -90,9 +90,13 @@
   </div>
 
   <!-- position evaluation bar -->
-  <div class="eval-bar" id="eval-bar" title="Position evaluation — who's winning with perfect play">
-    <div class="eval-fill eval-egypt" id="eval-egypt" style="width:50%"></div>
-    <div class="eval-fill eval-hindu" id="eval-hindu" style="width:50%"></div>
+  <div class="eval-wrap">
+    <span class="eval-label eval-label-p1" id="eval-pct-egypt">50%</span>
+    <div class="eval-bar" id="eval-bar" title="Position evaluation — who's winning with perfect play">
+      <div class="eval-fill eval-egypt" id="eval-egypt" style="width:50%"></div>
+      <div class="eval-fill eval-hindu" id="eval-hindu" style="width:50%"></div>
+    </div>
+    <span class="eval-label eval-label-p2" id="eval-pct-hindu">50%</span>
   </div>
 
   <!-- theme selector -->
@@ -120,6 +124,12 @@
     </select>
     <button class="fun-btn" id="btn-fullscreen" title="Toggle fullscreen">⛶ Full</button>
     <button class="fun-btn" id="btn-spectator" title="Watch two AIs battle each other">👁 Demo</button>
+    <select id="spectator-speed" class="timer-select" style="display:none" title="Demo speed">
+      <option value="4800">Slow</option>
+      <option value="2800" selected>Normal</option>
+      <option value="1400">Fast</option>
+      <option value="600">Turbo</option>
+    </select>
     <button class="fun-btn" id="btn-install" title="Install as app" style="display:none">⬇ Install</button>
   </div>
 
@@ -161,6 +171,7 @@
     <button class="btn btn-log" id="btn-log">📋 Log</button>
     <button class="btn btn-achievements" id="btn-achievements">🏅 Feats</button>
     <button class="btn btn-share" id="btn-share">📤 Share</button>
+    <button class="btn btn-copy-moves" id="btn-copy-moves" title="Copy move list to clipboard">📋 Moves</button>
   </div>
 
   <!-- Move history log panel -->
