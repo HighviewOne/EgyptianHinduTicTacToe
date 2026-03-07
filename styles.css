@@ -1323,6 +1323,33 @@ header {
   color: rgba(255,255,255,.55);
   transition: background .3s;
 }
+/* ── Per-theme win rate breakdown ── */
+.theme-stats-section { margin-bottom: 20px; }
+.theme-stats-title {
+  font-family: 'Cinzel', serif; font-size: .65rem; letter-spacing: .12em;
+  color: rgba(255,255,255,.38); text-align: center; margin-bottom: 12px;
+}
+.theme-stat-row {
+  display: grid; grid-template-columns: 1fr auto auto;
+  align-items: center; gap: 10px; margin-bottom: 8px;
+}
+.theme-stat-name {
+  font-size: .72rem; color: rgba(255,255,255,.65);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.theme-stat-bar {
+  width: 90px; height: 6px; background: rgba(255,255,255,.08);
+  border-radius: 3px; overflow: hidden;
+}
+.theme-stat-fill {
+  height: 100%; border-radius: 3px;
+  background: linear-gradient(90deg, rgba(var(--p1-rgb),.7), rgba(var(--p2-rgb),.7));
+  transition: width .5s ease;
+}
+.theme-stat-pct {
+  font-size: .7rem; color: rgba(255,255,255,.45); width: 32px; text-align: right;
+}
+
 .stats-actions { display: flex; gap: 10px; justify-content: center; }
 .btn-stats-reset { background: rgba(255,68,68,.2); border: 1px solid rgba(255,68,68,.3); color: #ff8888; }
 .btn-stats-reset:hover { background: rgba(255,68,68,.35); }
