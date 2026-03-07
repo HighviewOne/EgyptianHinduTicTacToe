@@ -640,6 +640,68 @@ header {
   background: var(--egypt-gold);
   cursor: pointer;
 }
+/* Music volume slider — slightly smaller, cyan thumb */
+#vol-music::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--egypt-teal);
+  cursor: pointer;
+  box-shadow: 0 0 6px rgba(var(--p2-rgb),.4);
+}
+#vol-music::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: none;
+  border-radius: 50%;
+  background: var(--egypt-teal);
+  cursor: pointer;
+}
+
+/* Timer duration select */
+.timer-select {
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 8px;
+  color: rgba(255,255,255,.7);
+  font-family: 'Cinzel', serif;
+  font-size: .7rem;
+  padding: 6px 10px;
+  cursor: pointer;
+  outline: none;
+  flex-shrink: 0;
+  transition: border-color .2s;
+}
+.timer-select:hover { border-color: rgba(255,255,255,.28); }
+.timer-select option { background: #1a0a00; }
+
+/* Game summary toast (bottom centre, auto-dismiss) */
+.game-summary {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: rgba(20,12,0,.92);
+  border: 1px solid rgba(212,160,23,.28);
+  border-radius: 30px;
+  padding: 8px 20px;
+  font-size: .74rem;
+  color: rgba(255,220,100,.82);
+  letter-spacing: .06em;
+  pointer-events: none;
+  z-index: 2000;
+  opacity: 0;
+  transition: opacity .35s, transform .35s;
+  white-space: nowrap;
+}
+.game-summary.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
 .btn-music.on {
   background: linear-gradient(135deg, rgba(212,160,23,.25), rgba(255,107,53,.2));
   color: var(--egypt-sand);

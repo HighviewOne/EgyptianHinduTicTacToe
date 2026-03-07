@@ -306,9 +306,10 @@ function initEditableNames() {
 /* ─────────────────────────────────────────────
    Timed-mode state
 ───────────────────────────────────────────── */
-let timedMode    = false;
+let timedMode     = false;
 let timerInterval = null;
-let timerLeft    = 15;
+let timerLeft     = 15;
+let timerSeconds  = 15;  // configurable timer duration
 
 /* ─────────────────────────────────────────────
    Chaos state
@@ -686,6 +687,26 @@ function showAnalysis() {
 }
 
 /* ─────────────────────────────────────────────
+   Post-game summary toast
+───────────────────────────────────────────── */
+function showGameSummary() {
+  const el = document.getElementById('game-summary');
+  if (!el) return;
+  const total    = moveLog.length;
+  const optimal  = moveLog.filter(m => m.quality === 'best').length;
+  const blunders = moveLog.filter(m => m.quality === 'blunder').length;
+  const chaos    = chaosLog.length;
+  if (!total) return;
+  const parts = [`${total} moves`];
+  if (optimal  > 0) parts.push(`${optimal} optimal`);
+  if (blunders > 0) parts.push(`${blunders} blunder${blunders > 1 ? 's' : ''}`);
+  if (chaos    > 0) parts.push(`${chaos} chaos event${chaos > 1 ? 's' : ''}`);
+  el.textContent = parts.join(' · ');
+  el.classList.add('visible');
+  setTimeout(() => el.classList.remove('visible'), 4500);
+}
+
+/* ─────────────────────────────────────────────
    Achievements gallery
 ───────────────────────────────────────────── */
 function showAchievementsModal() {
@@ -926,7 +947,7 @@ function startTimer() {
   if (!timedMode || gameState.gameOver || introShowing || chaosShowing) return;
   if (aiMode && gameState.currentPlayer === HINDU) return; // no timer for AI
 
-  const SECS = 15;
+  const SECS = timerSeconds;
   timerLeft = SECS;
   const fill = document.getElementById('timer-fill');
   const wrap = document.getElementById('timer-wrap');
@@ -941,7 +962,7 @@ function startTimer() {
 
   timerInterval = setInterval(() => {
     timerLeft--;
-    if (timerLeft <= 5) fill.classList.add('urgent');
+    if (timerLeft <= Math.min(5, Math.floor(SECS / 3))) fill.classList.add('urgent');
     if (timerLeft <= 0) { clearTimer(); onTimerExpire(); }
   }, 1000);
 }
@@ -1525,6 +1546,7 @@ function handleClick(i) {
       document.getElementById('btn-replay').style.display = '';
       document.getElementById('btn-hint').disabled = true;
       document.getElementById('btn-analysis').style.display = '';
+      setTimeout(showGameSummary, 900);
     } else {
       const w = result.winner;
       sfxWin(w);
@@ -1577,6 +1599,7 @@ function handleClick(i) {
       document.getElementById('btn-replay').style.display = '';
       document.getElementById('btn-hint').disabled = true;
       document.getElementById('btn-analysis').style.display = '';
+      setTimeout(showGameSummary, 900);
       if (matchTarget && gameState.scores[w] >= Math.ceil(matchTarget / 2)) {
         setTimeout(() => showMatchVictory(w), 1200);
       }
@@ -1778,14 +1801,17 @@ function resetScores() {
 function savePrefs() {
   try {
     localStorage.setItem('ehttt', JSON.stringify({
-      key:    currentThemeKey === 'random' ? 'egypt-hindu' : currentThemeKey,
-      mode:   aiMode,
-      cosmic: cosmicMode,
-      sand:   sandstormMode,
-      chaos:  chaosMode,
-      match:  matchTarget,
-      name1:  document.getElementById('name-egypt').textContent.trim() || '',
-      name2:  document.getElementById('name-hindu').textContent.trim() || '',
+      key:        currentThemeKey === 'random' ? 'egypt-hindu' : currentThemeKey,
+      mode:       aiMode,
+      cosmic:     cosmicMode,
+      sand:       sandstormMode,
+      chaos:      chaosMode,
+      match:      matchTarget,
+      name1:      document.getElementById('name-egypt').textContent.trim() || '',
+      name2:      document.getElementById('name-hindu').textContent.trim() || '',
+      timerSecs:  timerSeconds,
+      volSfx:     parseFloat(document.getElementById('vol-slider').value) / 100,
+      volMusic:   parseFloat(document.getElementById('vol-music').value)  / 100,
     }));
   } catch (_) {}
 }
@@ -1824,6 +1850,21 @@ function loadPrefs() {
     // Restore custom player names (applied after applyTheme which sets defaults)
     if (p.name1) { const el = document.getElementById('name-egypt'); if (el) el.textContent = p.name1; }
     if (p.name2) { const el = document.getElementById('name-hindu'); if (el) el.textContent = p.name2; }
+    // Restore audio levels
+    if (p.volSfx != null) {
+      setVolume(p.volSfx);
+      document.getElementById('vol-slider').value = Math.round(p.volSfx * 100);
+    }
+    if (p.volMusic != null) {
+      setMusicVolume(p.volMusic);
+      document.getElementById('vol-music').value = Math.round(p.volMusic * 100);
+    }
+    // Restore timer duration
+    if (p.timerSecs) {
+      timerSeconds = p.timerSecs;
+      const sel = document.getElementById('timer-secs');
+      if (sel) sel.value = timerSeconds;
+    }
     return true;
   } catch (_) { return false; }
 }
@@ -1877,7 +1918,12 @@ document.addEventListener('keydown', e => {
 document.getElementById('btn-restart').addEventListener('click', newRound);
 document.getElementById('btn-reset').addEventListener('click', resetScores);
 document.getElementById('btn-music').addEventListener('click', toggleMusic);
-document.getElementById('vol-slider').addEventListener('input', e => setVolume(e.target.value / 100));
+document.getElementById('vol-slider').addEventListener('input', e => { setVolume(e.target.value / 100); savePrefs(); });
+document.getElementById('vol-music').addEventListener('input',  e => { setMusicVolume(e.target.value / 100); savePrefs(); });
+document.getElementById('timer-secs').addEventListener('change', e => {
+  timerSeconds = parseInt(e.target.value);
+  savePrefs();
+});
 document.getElementById('mode-2p').addEventListener('click',     () => setMode(null));
 document.getElementById('mode-easy').addEventListener('click',   () => setMode('easy'));
 document.getElementById('mode-medium').addEventListener('click', () => setMode('medium'));
@@ -1919,6 +1965,7 @@ document.getElementById('btn-chaos').addEventListener('click', () => {
 document.getElementById('btn-timed').addEventListener('click', () => {
   timedMode = !timedMode;
   document.getElementById('btn-timed').classList.toggle('active', timedMode);
+  document.getElementById('timer-secs').style.display = timedMode ? '' : 'none';
   if (!timedMode) clearTimer();
   else if (!gameState.gameOver && (!aiMode || gameState.currentPlayer === EGYPT)) startTimer();
 });

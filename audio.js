@@ -10,8 +10,10 @@ function getCtx() {
   return audioCtx;
 }
 
-/* Master gain — all audio routes through here for volume control */
-let masterGainNode = null;
+/* Two independent gain nodes — SFX and music controlled separately */
+let masterGainNode = null;   // SFX (placement, win, draw, chaos sounds)
+let musicGainNode  = null;   // Music (melody + drone)
+
 function getMasterGain() {
   const ctx = getCtx();
   if (!masterGainNode) {
@@ -21,9 +23,22 @@ function getMasterGain() {
   }
   return masterGainNode;
 }
-function setVolume(v) {
+function getMusicGain() {
+  const ctx = getCtx();
+  if (!musicGainNode) {
+    musicGainNode = ctx.createGain();
+    musicGainNode.gain.setValueAtTime(0.55, ctx.currentTime);
+    musicGainNode.connect(ctx.destination);
+  }
+  return musicGainNode;
+}
+function setVolume(v) {  // SFX volume
   const ctx = getCtx();
   getMasterGain().gain.linearRampToValueAtTime(Math.max(0, Math.min(1, v)), ctx.currentTime + 0.04);
+}
+function setMusicVolume(v) {
+  const ctx = getCtx();
+  getMusicGain().gain.linearRampToValueAtTime(Math.max(0, Math.min(1, v)), ctx.currentTime + 0.04);
 }
 
 function note(freq, type, gainPeak, attackT, decayT, startOffset = 0) {
@@ -32,7 +47,24 @@ function note(freq, type, gainPeak, attackT, decayT, startOffset = 0) {
   const osc  = ctx.createOscillator();
   const gain = ctx.createGain();
   osc.connect(gain);
-  gain.connect(getMasterGain());
+  gain.connect(getMasterGain()); // SFX chain
+  osc.type      = type;
+  osc.frequency.setValueAtTime(freq, t);
+  gain.gain.setValueAtTime(0, t);
+  gain.gain.linearRampToValueAtTime(gainPeak, t + attackT);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t + attackT + decayT);
+  osc.start(t);
+  osc.stop(t + attackT + decayT);
+}
+
+/* Music note — routes through musicGainNode, not sfx chain */
+function noteM(freq, type, gainPeak, attackT, decayT, startOffset = 0) {
+  const ctx  = getCtx();
+  const t    = ctx.currentTime + startOffset;
+  const osc  = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.connect(gain);
+  gain.connect(getMusicGain()); // music chain
   osc.type      = type;
   osc.frequency.setValueAtTime(freq, t);
   gain.gain.setValueAtTime(0, t);
@@ -153,7 +185,7 @@ function startDrone() {
   const out = ctx.createGain();
   out.gain.setValueAtTime(0, ctx.currentTime);
   out.gain.linearRampToValueAtTime(1, ctx.currentTime + 2.5);
-  out.connect(getMasterGain());
+  out.connect(getMusicGain());
 
   const oscs = droneFreqs.map(({ freq, vol }) => {
     const osc = ctx.createOscillator();
@@ -198,9 +230,9 @@ function tickMelody() {
   melodyStep++;
   if (idx >= 0) {
     const hz = scale[idx];
-    note(hz,     'sine', 0.10, 0.04, 0.48);
-    note(hz * 2, 'sine', 0.04, 0.04, 0.38);
-    note(hz,     'sine', 0.04, 0.04, 0.38, 0.40);
+    noteM(hz,     'sine', 0.10, 0.04, 0.48);
+    noteM(hz * 2, 'sine', 0.04, 0.04, 0.38);
+    noteM(hz,     'sine', 0.04, 0.04, 0.38, 0.40);
   }
   melodyTimer = setTimeout(tickMelody, stepMs);
 }
