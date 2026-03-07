@@ -345,5 +345,29 @@ const ACHIEVEMENTS = [
   { id: 'perfect-game',icon: '⭐',  name: 'Perfect Execution', desc: 'Win a game making only optimal moves' },
 ];
 
+/* ── Did You Know tips ── */
+const DID_YOU_KNOW = [
+  "💡 Press H for a hint — it shows and names the best possible move.",
+  "💡 Press ? to see all keyboard shortcuts at any time.",
+  "💡 Chaos mode has 13 wild rules — toggle individual ones with the ⚙ button.",
+  "💡 The eval bar shows who has the advantage with perfect play — watch it shift!",
+  "💡 Move quality badges (✓ ≈ ✗) on each cell tell you how good the move was.",
+  "💡 Press R after a game to replay every move with animation.",
+  "💡 🌫 Fog mode hides your opponent's pieces as ● until the game ends.",
+  "💡 Coordinate labels A1–C3 on empty cells match the move log and analysis notation.",
+  "💡 Best of 3 / 5 / 7 match mode — first player to the threshold wins the crown.",
+  "💡 All 5 named themes have unique music, sounds, lore, and win messages.",
+  "💡 The ✦ Random theme generates a brand new palette and symbol pair every time.",
+  "💡 ↩ Undo lets you take back your last move — even against the AI.",
+  "💡 The 👁 Demo button lets two Hard AIs battle each other automatically.",
+  "💡 ⏱ Timed mode auto-places a random move if you run out of time.",
+  "💡 You can rename the players — just click their name on the player card.",
+  "💡 🔍 Analyse shows move quality ratings for every play after the game ends.",
+  "💡 Streak badges appear when a player wins 3+ games in a row.",
+  "💡 Check 📊 Stats for your all-time record, cell heatmap, and theme win rates.",
+  "💡 Arrow keys navigate the board; Enter or Space places your piece.",
+  "💡 The game is installable as a PWA — look for the ⬇ Install button!",
+];
+
 /* ── All-time stats localStorage key ── */
 const STATS_KEY = 'ehttt-stats';

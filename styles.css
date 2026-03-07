@@ -1402,6 +1402,13 @@ header {
 .log-badge.quality-fine    { color: rgba(255,255,255,.4); }
 .log-badge.quality-blunder { color: #eb5757; }
 
+/* ── Keyboard-focused cell ── */
+.cell:focus { outline: none; }
+.cell:focus-visible {
+  box-shadow: 0 0 0 3px rgba(var(--p1-rgb), .7), 0 0 14px rgba(var(--p1-rgb), .4) !important;
+  z-index: 2;
+}
+
 /* ── Board coordinate labels (A1–C3 on empty cells) ── */
 .coord-label {
   position: absolute; bottom: 4px; right: 5px;

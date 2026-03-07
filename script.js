@@ -76,6 +76,13 @@ let _prevAiMode   = null;        // aiMode saved before spectator starts
 let moveLog  = [];               // [{player, pos, turn}] per-round move history
 let chaosLog = [];               // [{icon, name}] chaos events that fired this round
 const POS_LABELS = ['A1','B1','C1','A2','B2','C2','A3','B3','C3'];
+let _dykIdx  = Math.floor(Math.random() * (DID_YOU_KNOW ? DID_YOU_KNOW.length : 20));
+function maybeShowTip() {
+  if (!DID_YOU_KNOW || Math.random() > 0.25) return;
+  const tip = DID_YOU_KNOW[_dykIdx % DID_YOU_KNOW.length];
+  _dykIdx++;
+  setTimeout(() => showChaosEvent(tip, 4800), 3500);
+}
 
 /* ─────────────────────────────────────────────
    All-time stats (localStorage)
@@ -497,6 +504,7 @@ function renderBoard(winCells = []) {
       _cl.className   = 'coord-label';
       _cl.textContent = POS_LABELS[i] || '';
       cell.appendChild(_cl);
+      if (!gameState.gameOver && !spectatorMode) cell.setAttribute('tabindex', '0');
     }
     if (chaosMode && chaosState.ghostCell === i && val) cell.classList.add('ghost-cell');
     if (chaosMode && chaosState.holyCell === i && !val) cell.classList.add('holy-cell');
@@ -1075,6 +1083,7 @@ function burstParticles(winner) {
   const c2  = currentTheme.players[opp].primary;
   const colors = [c1, c2, '#ffffff', '#ffe566', c1, c2];
 
+  const _shapes = ['rect', 'rect', 'circle', 'tri'];
   const particles = Array.from({ length: 90 }, () => ({
     x:     cx,
     y:     cy,
@@ -1086,6 +1095,7 @@ function burstParticles(winner) {
     rot:   Math.random() * Math.PI * 2,
     rvel:  (Math.random() - 0.5) * 0.35,
     wide:  0.4 + Math.random() * 0.6,
+    shape: _shapes[randInt(_shapes.length)],
   }));
 
   const animate = () => {
@@ -1104,7 +1114,20 @@ function burstParticles(winner) {
         ctx.fillStyle   = p.color;
         ctx.translate(p.x, p.y);
         ctx.rotate(p.rot);
-        ctx.fillRect(-p.r * p.wide / 2, -p.r / 2, p.r * p.wide, p.r);
+        if (p.shape === 'circle') {
+          ctx.beginPath();
+          ctx.arc(0, 0, p.r / 2, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (p.shape === 'tri') {
+          ctx.beginPath();
+          ctx.moveTo(0, -p.r / 2);
+          ctx.lineTo(p.r / 2, p.r / 2);
+          ctx.lineTo(-p.r / 2, p.r / 2);
+          ctx.closePath();
+          ctx.fill();
+        } else {
+          ctx.fillRect(-p.r * p.wide / 2, -p.r / 2, p.r * p.wide, p.r);
+        }
         ctx.restore();
       }
     });
@@ -1682,6 +1705,7 @@ function handleClick(i) {
       document.getElementById('btn-hint').disabled = true;
       document.getElementById('btn-analysis').style.display = '';
       setTimeout(showGameSummary, 900);
+      maybeShowTip();
     } else {
       const w = result.winner;
       sfxWin(w, currentThemeKey);
@@ -1737,6 +1761,7 @@ function handleClick(i) {
       document.getElementById('btn-hint').disabled = true;
       document.getElementById('btn-analysis').style.display = '';
       setTimeout(showGameSummary, 900);
+      maybeShowTip();
       if (matchTarget && gameState.scores[w] >= Math.ceil(matchTarget / 2)) {
         setTimeout(() => showMatchVictory(w), 1200);
       }
@@ -2014,6 +2039,32 @@ function loadPrefs() {
    Numpad 1–9 → board-position-intuitive mapping
    N → new round   M → toggle music
 ───────────────────────────────────────────── */
+/* ─────────────────────────────────────────────
+   Board keyboard navigation (Arrow keys + Enter/Space)
+───────────────────────────────────────────── */
+boardEl.addEventListener('keydown', e => {
+  if (gameState.gameOver || aiThinking || replaying || spectatorMode) return;
+  const cells = [...boardEl.querySelectorAll('.cell')];
+  const focused = document.activeElement;
+  const idx = cells.indexOf(focused);
+  if (idx < 0) return;
+
+  const col = idx % 3, row = Math.floor(idx / 3);
+  const dirs = {
+    ArrowRight: row * 3 + ((col + 1) % 3),
+    ArrowLeft:  row * 3 + ((col + 2) % 3),
+    ArrowDown:  ((row + 1) % 3) * 3 + col,
+    ArrowUp:    ((row + 2) % 3) * 3 + col,
+  };
+  if (dirs[e.key] !== undefined) {
+    e.preventDefault();
+    cells[dirs[e.key]].focus();
+  } else if ((e.key === 'Enter' || e.key === ' ') && !focused.classList.contains('taken')) {
+    e.preventDefault();
+    handleClick(idx);
+  }
+});
+
 document.addEventListener('keydown', e => {
   // Escape closes any open modal / overlay
   if (e.code === 'Escape') {
