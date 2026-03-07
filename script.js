@@ -72,7 +72,8 @@ let hintUsedThisGame  = false;   // true once showHint() fires this round
 let trailedInMatch    = false;   // true once opponent had 2+ wins while player had 0
 let spectatorMode = false;       // AI vs AI demo mode
 let _prevAiMode   = null;        // aiMode saved before spectator starts
-let moveLog = [];                // [{player, pos, turn}] per-round move history
+let moveLog  = [];               // [{player, pos, turn}] per-round move history
+let chaosLog = [];               // [{icon, name}] chaos events that fired this round
 const POS_LABELS = ['A1','B1','C1','A2','B2','C2','A3','B3','C3'];
 
 /* ─────────────────────────────────────────────
@@ -84,8 +85,27 @@ function loadAllTimeStats() {
 function saveAllTimeStats(s) {
   try { localStorage.setItem(STATS_KEY, JSON.stringify(s)); } catch (_) {}
 }
+function getRank(wins) {
+  if (wins >= 50) return { label: '★ Legend',       color: '#FF4444' };
+  if (wins >= 30) return { label: '◆ Grand Master',  color: '#CF9FFF' };
+  if (wins >= 15) return { label: '● Champion',      color: '#FFD700' };
+  if (wins >= 5)  return { label: '▲ Strategist',    color: '#4FC3F7' };
+  return                  { label: '◌ Novice',        color: 'rgba(255,255,255,.32)' };
+}
+function updateRankBadges() {
+  const s = loadAllTimeStats();
+  const r1 = getRank(s.egypt || 0);
+  const r2 = getRank(s.hindu || 0);
+  const el1 = document.getElementById('rank-egypt');
+  const el2 = document.getElementById('rank-hindu');
+  if (el1) { el1.textContent = r1.label; el1.style.color = r1.color; }
+  if (el2) { el2.textContent = r2.label; el2.style.color = r2.color; }
+}
+
 function updateAllTimeStats(outcome) {
   const s = loadAllTimeStats();
+  const oldR1 = getRank(s.egypt || 0).label;
+  const oldR2 = getRank(s.hindu || 0).label;
   s.gamesPlayed = (s.gamesPlayed || 0) + 1;
   if (outcome === 'draw') {
     s.draws = (s.draws || 0) + 1;
@@ -97,8 +117,22 @@ function updateAllTimeStats(outcome) {
   s.recentGames.push(outcome);
   if (s.recentGames.length > 10) s.recentGames.shift();
   saveAllTimeStats(s);
+  // Rank-up announcements
+  if (outcome !== 'draw') {
+    const newR1 = getRank(s.egypt || 0);
+    const newR2 = getRank(s.hindu || 0);
+    if (newR1.label !== oldR1 && s.egypt > 0) {
+      setTimeout(() => showChaosEvent(`⬆️ ${currentTheme.players.egypt.name} RANKS UP: ${newR1.label}!`, 3200), 2000);
+    }
+    if (newR2.label !== oldR2 && s.hindu > 0) {
+      setTimeout(() => showChaosEvent(`⬆️ ${currentTheme.players.hindu.name} RANKS UP: ${newR2.label}!`, 3200), 2000);
+    }
+  }
+  updateRankBadges();
 }
 function showStatsModal() {
+  // Clear previously-inserted dynamic sections to prevent duplication on re-open
+  document.querySelectorAll('.recent-games, .heat-section').forEach(el => el.remove());
   const s  = loadAllTimeStats();
   const p1 = currentTheme.players.egypt;
   const p2 = currentTheme.players.hindu;
@@ -138,6 +172,7 @@ function showStatsModal() {
   document.getElementById('stats-modal').classList.add('visible');
 }
 function resetAllTimeStats() {
+
   try { localStorage.removeItem(STATS_KEY); } catch (_) {}
   showStatsModal();
 }
@@ -173,7 +208,7 @@ function unlockAchievement(ach) {
   if (!ach) return;
   const a = loadAchievements();
   if (a[ach.id]) return;
-  a[ach.id] = true;
+  a[ach.id] = Date.now();
   saveAchievements(a);
   achQueue.push(ach);
   if (achQueue.length === 1) setTimeout(showNextAch, 700);
@@ -625,7 +660,7 @@ function showAnalysis() {
   } else {
     const qIcon  = q => q === 'best' ? '✓' : q === 'fine' ? '≈' : '✗';
     const qLabel = q => q === 'best' ? 'Optimal' : q === 'fine' ? 'Suboptimal' : 'Blunder';
-    list.innerHTML = moveLog.map(m =>
+    let html = moveLog.map(m =>
       `<div class="analysis-entry">
         <span class="analysis-turn">${m.turn}.</span>
         <span class="analysis-sym ${m.player}-entry">${SYMBOLS[m.player] || ''}</span>
@@ -634,8 +669,39 @@ function showAnalysis() {
         ${m.bestPos ? `<span class="analysis-best">best: ${m.bestPos}</span>` : ''}
       </div>`
     ).join('');
+    if (chaosLog.length) {
+      html += `<div class="analysis-chaos-section">
+        <div class="analysis-chaos-title">⚡ Chaos Events</div>
+        ${chaosLog.map(e => `<div class="analysis-chaos-entry"><span>${e.icon}</span> ${e.name}</div>`).join('')}
+      </div>`;
+    }
+    list.innerHTML = html;
   }
   document.getElementById('analysis-modal').classList.add('visible');
+}
+
+/* ─────────────────────────────────────────────
+   Achievements gallery
+───────────────────────────────────────────── */
+function showAchievementsModal() {
+  const a = loadAchievements();
+  const unlocked = ACHIEVEMENTS.filter(ach => a[ach.id]);
+  document.getElementById('achievements-count').textContent =
+    `${unlocked.length} / ${ACHIEVEMENTS.length} Unlocked`;
+  document.getElementById('achievements-list').innerHTML = ACHIEVEMENTS.map(ach => {
+    const isUnlocked = !!a[ach.id];
+    const ts = typeof a[ach.id] === 'number'
+      ? new Date(a[ach.id]).toLocaleDateString() : '';
+    return `<div class="ach-card ${isUnlocked ? 'unlocked' : 'locked'}">
+      <div class="ach-card-icon">${ach.icon}</div>
+      <div class="ach-card-body">
+        <div class="ach-card-name">${ach.name}</div>
+        <div class="ach-card-desc">${ach.desc}</div>
+        ${isUnlocked && ts ? `<div class="ach-card-date">✓ ${ts}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('achievements-modal').classList.add('visible');
 }
 
 /* ─────────────────────────────────────────────
@@ -1249,6 +1315,7 @@ function handleClick(i) {
         board[actualI] = currentPlayer;
         lastPlacedCell = actualI;
         sfxChaos('wild-turn');
+        chaosLog.push({ icon: '🎲', name: 'Wild Turn' });
         showChaosEvent('🎲 WILD TURN! The gods have rerouted your piece to a random square!');
         triggerCellShake(actualI);
       }
@@ -1266,6 +1333,7 @@ function handleClick(i) {
       board[target] = null;
       if (chaosState.ghostCell === target) chaosState.ghostCell = -1;
       sfxChaos('smite');
+      chaosLog.push({ icon: '⚡', name: 'Smite' });
       showChaosEvent(`⚡ SMITE! A divine bolt obliterates ${currentTheme.players[opp].name}'s piece!`);
       triggerSolarFlare();
     }
@@ -1282,6 +1350,7 @@ function handleClick(i) {
       const h = hCells[randInt(hCells.length)];
       [board[e], board[h]] = [board[h], board[e]];
       sfxChaos('swap-souls');
+      chaosLog.push({ icon: '🔄', name: 'Swap Souls' });
       showChaosEvent('🔄 SOUL SWAP! Two pieces have switched allegiances in a moment of cosmic betrayal!');
     }
   }
@@ -1293,6 +1362,7 @@ function handleClick(i) {
     markChaosUsed('mirror');
     updateBoardTransform();
     sfxChaos('mirror');
+    chaosLog.push({ icon: '🪞', name: 'Mirror Realm' });
     showChaosEvent('🪞 MIRROR REALM! The board has been reflected into a parallel dimension!');
   }
 
@@ -1301,6 +1371,7 @@ function handleClick(i) {
     chaosState.solarUsed = true;
     markChaosUsed('solar-flare');
     sfxChaos('solar-flare');
+    chaosLog.push({ icon: '🌟', name: 'Solar Flare' });
     triggerSolarFlare();
     showChaosEvent('🌟 SOLAR FLARE! Blinding divine light has descended upon the battlefield!');
   }
@@ -1311,6 +1382,7 @@ function handleClick(i) {
     chaosState.lagActive = true;
     markChaosUsed('divine-lag');
     sfxChaos('divine-lag');
+    chaosLog.push({ icon: '⏳', name: 'Divine Lag' });
     showChaosEvent('⏳ DIVINE LAG! The celestial servers are buffering... please hold...', 3300);
     setTimeout(() => { chaosState.lagActive = false; }, 3000);
   }
@@ -1321,6 +1393,7 @@ function handleClick(i) {
     markChaosUsed('treachery');
     board[actualI] = getNextPlayer(currentPlayer);
     sfxChaos('treachery');
+    chaosLog.push({ icon: '🗡', name: 'Treachery' });
     showChaosEvent(`🗡 TREACHERY! The piece betrays its master and now serves the enemy!`);
   }
 
@@ -1456,6 +1529,7 @@ function handleClick(i) {
       chaosState.ghostCell  = actualI;
       chaosState.ghostOwner = currentPlayer;
       sfxChaos('ghost-move');
+      chaosLog.push({ icon: '👻', name: 'Ghost Move' });
       showChaosEvent('👻 GHOST MOVE! A spectral piece materializes on the board... barely real!');
     }
 
@@ -1466,6 +1540,7 @@ function handleClick(i) {
       grantBlessing = true;
       markChaosUsed('blessing');
       sfxChaos('blessing');
+      chaosLog.push({ icon: '✨', name: 'Blessing of Twofold' });
       showChaosEvent(`✨ BLESSING OF TWOFOLD! ${currentTheme.players[currentPlayer].name} PLAYS AGAIN!`);
     }
 
@@ -1475,6 +1550,7 @@ function handleClick(i) {
       const toSkip = getNextPlayer(currentPlayer);
       chaosState.skipNext = toSkip;
       sfxChaos('cursed-skip');
+      chaosLog.push({ icon: '💀', name: 'Cursed Skip' });
       showChaosEvent(`💀 CURSED SKIP incoming! ${currentTheme.players[toSkip].name}'s NEXT turn will vanish into darkness!`);
     }
 
@@ -1564,7 +1640,8 @@ function newRound() {
   clearTimer();
   lastPlacedCell = -1;
   gameLog = [];
-  moveLog = [];
+  moveLog  = [];
+  chaosLog = [];
   updateMoveLog();
   replaying = false;
   hintUsedThisGame = false;
@@ -1694,6 +1771,7 @@ document.addEventListener('keydown', e => {
     document.getElementById('match-victory').classList.remove('visible');
     document.getElementById('shortcut-help').classList.remove('visible');
     document.getElementById('analysis-modal').classList.remove('visible');
+    document.getElementById('achievements-modal').classList.remove('visible');
     return;
   }
   // ? opens shortcut help (works even during intro/chaos)
@@ -1832,6 +1910,15 @@ document.getElementById('mv-btn').addEventListener('click', () => {
 // Spectator / Demo mode
 document.getElementById('btn-spectator').addEventListener('click', toggleSpectator);
 
+// Achievements gallery
+document.getElementById('btn-achievements').addEventListener('click', showAchievementsModal);
+document.getElementById('btn-achievements-close').addEventListener('click', () => {
+  document.getElementById('achievements-modal').classList.remove('visible');
+});
+document.getElementById('achievements-modal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.remove('visible');
+});
+
 // Post-game move analysis
 document.getElementById('btn-analysis').addEventListener('click', showAnalysis);
 document.getElementById('btn-analysis-close').addEventListener('click', () => {
@@ -1897,3 +1984,4 @@ if (!loadPrefs()) {
   renderBoard();
   showIntro();
 }
+updateRankBadges();
