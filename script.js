@@ -475,6 +475,12 @@ function renderBoard(winCells = []) {
         && val !== gameState.currentPlayer;
       cell.textContent = _fogHide ? '●' : SYMBOLS[val];
       if (_fogHide) cell.classList.add('fog-hidden');
+    } else {
+      // Coordinate label on empty cells
+      const _cl = document.createElement('span');
+      _cl.className   = 'coord-label';
+      _cl.textContent = POS_LABELS[i] || '';
+      cell.appendChild(_cl);
     }
     if (chaosMode && chaosState.ghostCell === i && val) cell.classList.add('ghost-cell');
     if (chaosMode && chaosState.holyCell === i && !val) cell.classList.add('holy-cell');
@@ -649,7 +655,16 @@ function showHint() {
   const cell = boardEl.querySelectorAll('.cell')[best];
   if (cell && !cell.classList.contains('taken')) {
     cell.classList.add('hint-cell');
-    hintTimer = setTimeout(() => cell.classList.remove('hint-cell'), 1800);
+    const _hintPos     = POS_LABELS[best] || `#${best + 1}`;
+    const _savedText   = statusEl.textContent;
+    const _savedClass  = statusEl.className;
+    statusEl.textContent = `💡 Best move: ${_hintPos}`;
+    statusEl.className   = 'status-text hint-msg';
+    hintTimer = setTimeout(() => {
+      cell.classList.remove('hint-cell');
+      statusEl.textContent = _savedText;
+      statusEl.className   = _savedClass;
+    }, 1800);
   }
 }
 
@@ -1649,7 +1664,7 @@ function handleClick(i) {
       setTimeout(showGameSummary, 900);
     } else {
       const w = result.winner;
-      sfxWin(w);
+      sfxWin(w, currentThemeKey);
       vibrate([80, 40, 80]);
       // Track trailing condition for Comeback King achievement
       if (matchTarget >= 5) {

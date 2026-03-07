@@ -1402,6 +1402,17 @@ header {
 .log-badge.quality-fine    { color: rgba(255,255,255,.4); }
 .log-badge.quality-blunder { color: #eb5757; }
 
+/* ── Board coordinate labels (A1–C3 on empty cells) ── */
+.coord-label {
+  position: absolute; bottom: 4px; right: 5px;
+  font-size: .42rem; font-family: monospace; letter-spacing: 0;
+  color: rgba(255,255,255,.16); pointer-events: none; user-select: none;
+}
+.cell:hover:not(.taken) .coord-label { color: rgba(255,255,255,.38); }
+
+/* ── Hint status message ── */
+.status-text.hint-msg { color: #FFD700; }
+
 /* ── Cell quality badge (floats off cell after placement) ── */
 .cell-quality-badge {
   position: absolute; top: 4px; right: 5px;

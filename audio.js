@@ -129,11 +129,43 @@ function sfxPlace(themeKey, player) {
   }
 }
 
-function sfxWin(player) {
-  const base = player === 'egypt' ? 220 : 330;
-  [1, 1.25, 1.5, 2].forEach((mul, i) => {
-    note(base * mul, 'sine', 0.3, 0.01, 0.35, i * 0.13);
-  });
+function sfxWin(player, themeKey) {
+  switch (themeKey) {
+    case 'classic':
+      // clean digital triumphant chord burst
+      (player === 'egypt'
+        ? [523.25, 659.25, 783.99, 1046.5]
+        : [440, 554.37, 659.25, 880]
+      ).forEach((f, i) => note(f, 'square', 0.10, 0.005, 0.25, i * 0.09));
+      break;
+    case 'greek-norse':
+      // brass-flavoured triumphant fanfare
+      (player === 'egypt'
+        ? [261.63, 329.63, 392, 523.25, 659.25]
+        : [130.81, 196, 261.63, 392, 523.25]
+      ).forEach((f, i) => note(f, 'triangle', 0.22, 0.01, 0.45, i * 0.11));
+      break;
+    case 'dragon-phoenix':
+      // pentatonic Chinese-flavoured rising scale
+      (player === 'egypt'
+        ? [220, 261.63, 329.63, 392, 523.25]
+        : [329.63, 392, 523.25, 659.25, 783.99]
+      ).forEach((f, i) => note(f, 'sine', 0.22, 0.01, 0.42, i * 0.12));
+      break;
+    case 'samurai-ninja':
+      // sharp koto-style ascending strike
+      (player === 'egypt'
+        ? [493.88, 587.33, 739.99, 987.77]
+        : [146.83, 196, 261.63, 349.23]
+      ).forEach((f, i) => note(f, 'triangle', 0.28, 0.002, 0.32, i * 0.09));
+      break;
+    default: { // egypt-hindu + random
+      const base = player === 'egypt' ? 220 : 330;
+      [1, 1.25, 1.5, 2].forEach((mul, i) => {
+        note(base * mul, 'sine', 0.3, 0.01, 0.35, i * 0.13);
+      });
+    }
+  }
 }
 
 function sfxDraw() {
