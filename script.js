@@ -601,6 +601,14 @@ function renderBoard(winCells = []) {
       cell.classList.add('win-cell');
       cell.style.setProperty('--win-delay', winCells.indexOf(i) * 80);
     }
+    // Threat highlighting — mark empty cells that would immediately win for either player
+    if (!val && !gameState.gameOver && !fogMode) {
+      for (const player of [EGYPT, HINDU]) {
+        const testB = [...gameState.board];
+        testB[i] = player;
+        if (boardWinner(testB) === player) cell.classList.add(`threat-${player}`);
+      }
+    }
     if (!spectatorMode) cell.addEventListener('click', () => handleClick(i));
     boardEl.appendChild(cell);
   });
@@ -1256,7 +1264,7 @@ function burstParticles(winner) {
 ───────────────────────────────────────────── */
 function updateUndoBtn() {
   const btn = document.getElementById('btn-undo');
-  if (btn) btn.disabled = !gameState.history.length || gameState.gameOver || !!aiThinking;
+  if (btn) btn.disabled = !gameState.history.length || !!aiThinking;
 }
 
 function saveSnapshot() {
@@ -1272,7 +1280,7 @@ function saveSnapshot() {
 }
 
 function undo() {
-  if (!gameState.history.length || gameState.gameOver || aiThinking) return;
+  if (!gameState.history.length || aiThinking) return;
   const snap = gameState.history.pop();
 
   gameState.board         = snap.board;
@@ -2003,6 +2011,11 @@ function handleClick(i, fromAI = false) {
     updateTurnUI();
     updateUndoBtn();
     updateEvalBar(gameState.currentPlayer === HINDU);
+    // Warn human player when they're in a forced-loss position
+    if (aiMode && !spectatorMode && gameState.currentPlayer === EGYPT && !gameState.gameOver) {
+      const _score = minimax([...gameState.board], false, -Infinity, Infinity);
+      if (_score === 10) setTimeout(() => { if (!gameState.gameOver) showChaosEvent('⚠ Forced loss — find your best move!', 2600); }, 500);
+    }
     scheduleAI();
     scheduleSpectatorAI();
     // Start timer for the next human move
