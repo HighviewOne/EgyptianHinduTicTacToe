@@ -7,6 +7,16 @@ const SYMBOLS = { egypt: '☥', hindu: 'ॐ' };
 const LABELS  = { egypt: "Egypt's turn — Place the Ankh ☥",
                   hindu: "India's turn — Invoke the Om ॐ" };
 
+/* Appends move-count / urgency suffix when game is in its later moves */
+function buildTurnLabel(player) {
+  const moveNum = moveLog.length + 1;
+  const base    = LABELS[player];
+  if (moveNum <= 4) return base;
+  if (moveNum >= 9) return base + ' · ⚡ Final move!';
+  if (moveNum >= 7) return base + ` · Move ${moveNum} · Last chance!`;
+  return base + ` · Move ${moveNum}`;
+}
+
 /* ─────────────────────────────────────────────
    Game state
    Single source of truth for everything that
@@ -39,6 +49,7 @@ function resetBoard() {
    DOM refs
 ───────────────────────────────────────────── */
 const boardEl    = document.getElementById('board');
+const boardWrapEl = boardEl.closest('.board-wrapper');
 const statusEl   = document.getElementById('status');
 const auraEl     = document.getElementById('board-aura');
 const winLineEl  = document.getElementById('win-line');
@@ -971,13 +982,26 @@ function replayGame() {
   const snapshots = [[...Array(9).fill(null)], ...gameLog];  // prepend empty board
   let step = 0;
 
+  const totalMoves = snapshots.length - 1;
   const doStep = () => {
     if (step >= snapshots.length) {
       // Restore actual final state
       renderBoard(gameState.lastWinCells || []);
+      statusEl.className   = `status-text ${gameState.lastWinner || EGYPT}-msg`;
+      statusEl.textContent = `↺ Replay complete`;
       replaying = false;
       btnReplay.disabled = false;
       return;
+    }
+    // Step counter in status bar
+    if (step === 0) {
+      statusEl.className   = 'status-text egypt-msg';
+      statusEl.textContent = `↺ Replaying ${totalMoves}-move game…`;
+    } else {
+      const logEntry = moveLog[step - 1];
+      const pl = logEntry ? logEntry.player : EGYPT;
+      statusEl.className   = `status-text ${pl}-msg`;
+      statusEl.textContent = `↺ Move ${step} / ${totalMoves} — ${SYMBOLS[pl] || ''} ${logEntry ? logEntry.pos : ''}`;
     }
     const snap = snapshots[step];
     // Render this snapshot directly (no event listeners needed during replay)
@@ -1851,6 +1875,9 @@ function handleClick(i) {
       setAura(w, true);
       drawWinLine(result.cells, w);
       burstParticles(w);
+      // Board flash in winner's colour
+      boardWrapEl.classList.add(`win-flash-${w}`);
+      boardWrapEl.addEventListener('animationend', () => boardWrapEl.classList.remove(`win-flash-${w}`), { once: true });
       const _lineName = getWinLineName(result.cells);
       if (_lineName) setTimeout(() => showChaosEvent(_lineName + '!', 2000), 750);
       updateAllTimeStats(w);
@@ -1949,7 +1976,7 @@ function handleClick(i) {
 
     if (!grantBlessing) gameState.currentPlayer = getNextPlayer(currentPlayer);
 
-    const nextLabel = LABELS[gameState.currentPlayer];
+    const nextLabel = buildTurnLabel(gameState.currentPlayer);
     if (quipText) {
       statusEl.className   = `status-text ${currentPlayer}-msg`;
       statusEl.textContent = `💬 ${quipText}`;
@@ -2214,6 +2241,11 @@ document.addEventListener('keydown', e => {
     toggleSpectator();
   } else if (e.code === 'KeyR' && !e.repeat) {
     if (gameState.gameOver && !replaying) replayGame();
+  } else if (e.code === 'KeyC' && !e.repeat) {
+    if (chaosMode) {
+      const cp = document.getElementById('chaos-config-panel');
+      cp.style.display = cp.style.display === 'none' ? '' : 'none';
+    }
   }
 });
 

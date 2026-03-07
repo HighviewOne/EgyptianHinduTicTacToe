@@ -1577,6 +1577,38 @@ header {
 }
 .cell.fresh { animation: cellPop .3s cubic-bezier(.22, 1.6, .36, 1); }
 
+/* Per-player piece entrance animations */
+@keyframes egyptEnter {
+  0%   { transform: scale(0.15) rotate(-20deg); opacity: 0; filter: brightness(4) drop-shadow(0 0 12px rgba(var(--p1-rgb),1)); }
+  55%  { transform: scale(1.24) rotate(4deg);   opacity: 1; filter: brightness(1.6); }
+  80%  { transform: scale(0.94) rotate(-1deg);  filter: brightness(1.1); }
+  100% { transform: scale(1)    rotate(0deg);   filter: brightness(1); }
+}
+@keyframes hinduEnter {
+  0%   { transform: scale(0.1)  rotate(120deg); opacity: 0; filter: brightness(3.5) drop-shadow(0 0 10px rgba(var(--p2-rgb),1)); }
+  55%  { transform: scale(1.20) rotate(-10deg); opacity: 1; filter: brightness(1.5); }
+  80%  { transform: scale(0.96) rotate(3deg);   filter: brightness(1.1); }
+  100% { transform: scale(1)    rotate(0deg);   filter: brightness(1); }
+}
+.cell.egypt-cell.fresh { animation: egyptEnter .42s cubic-bezier(.22, 1.6, .36, 1); }
+.cell.hindu-cell.fresh { animation: hinduEnter .42s cubic-bezier(.22, 1.6, .36, 1); }
+
+/* Board flash on win */
+@keyframes boardFlash {
+  0%   { opacity: 0; transform: scale(.85); }
+  20%  { opacity: 1; transform: scale(1.02); }
+  100% { opacity: 0; transform: scale(1.15); }
+}
+.board-wrapper.win-flash-egypt::after,
+.board-wrapper.win-flash-hindu::after {
+  content: '';
+  position: absolute; inset: -24px; border-radius: 18px;
+  pointer-events: none; z-index: 5;
+  animation: boardFlash .85s ease-out forwards;
+}
+.board-wrapper.win-flash-egypt::after { background: radial-gradient(circle, rgba(var(--p1-rgb),.38) 0%, transparent 68%); }
+.board-wrapper.win-flash-hindu::after { background: radial-gradient(circle, rgba(var(--p2-rgb),.38) 0%, transparent 68%); }
+
 /* ── Achievement toast ── */
 .ach-toast {
   position: fixed; top: 72px; right: -320px;
