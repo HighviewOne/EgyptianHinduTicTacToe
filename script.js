@@ -601,8 +601,9 @@ function renderBoard(winCells = []) {
       cell.classList.add('win-cell');
       cell.style.setProperty('--win-delay', winCells.indexOf(i) * 80);
     }
-    // Threat highlighting — mark empty cells that would immediately win for either player
-    if (!val && !gameState.gameOver && !fogMode) {
+    // Threat highlighting — only during human turn (no point showing while AI thinks)
+    const _humanTurn = !aiMode || gameState.currentPlayer === EGYPT;
+    if (!val && !gameState.gameOver && !fogMode && _humanTurn && !spectatorMode) {
       for (const player of [EGYPT, HINDU]) {
         const testB = [...gameState.board];
         testB[i] = player;
@@ -2011,8 +2012,8 @@ function handleClick(i, fromAI = false) {
     updateTurnUI();
     updateUndoBtn();
     updateEvalBar(gameState.currentPlayer === HINDU);
-    // Warn human player when they're in a forced-loss position
-    if (aiMode && !spectatorMode && gameState.currentPlayer === EGYPT && !gameState.gameOver) {
+    // Warn human player when they're in a forced-loss position (only meaningful after move 4)
+    if (aiMode && !spectatorMode && gameState.currentPlayer === EGYPT && !gameState.gameOver && moveLog.length >= 4) {
       const _score = minimax([...gameState.board], false, -Infinity, Infinity);
       if (_score === 10) setTimeout(() => { if (!gameState.gameOver) showChaosEvent('⚠ Forced loss — find your best move!', 2600); }, 500);
     }

@@ -46,27 +46,30 @@ function minimax(b, isMax, alpha, beta) {
 
 function getBestMove(b) {
   const empty = b.reduce((a, v, i) => (v ? a : [...a, i]), []);
-  if (aiMode === 'easy')   return empty[randInt(empty.length)];
-  if (aiMode === 'medium' && Math.random() < 0.5) return empty[randInt(empty.length)];
-  // Hard AI: randomise opening to avoid always playing the same game
-  const filled = b.filter(v => v).length;
-  if (filled === 0) {
-    // First move: pick center or a random corner
-    const openings = [0, 2, 4, 6, 8];
-    return openings[randInt(openings.length)];
-  }
-  if (filled === 1 && b[4] === null) {
-    // If center is free on move 2, take it 60 % of the time
-    if (Math.random() < 0.6) return 4;
-  }
-  let best = -Infinity, move = empty[0];
-  for (const i of empty) {
+  if (aiMode === 'easy') return empty[randInt(empty.length)];
+
+  // Score every empty cell
+  const scored = empty.map(i => {
     b[i]      = HINDU;
     const val = minimax(b, false, -Infinity, Infinity);
     b[i]      = null;
-    if (val > best) { best = val; move = i; }
+    return { i, val };
+  }).sort((a, z) => z.val - a.val); // best first
+
+  if (aiMode === 'medium') {
+    // Always plays optimally for winning/blocking threats;
+    // otherwise 30 % chance to pick the 2nd-best option
+    const best = scored[0].val;
+    const mustPlay = best === 10 || best > scored[1]?.val;  // winning or blocking
+    if (!mustPlay && scored.length > 1 && Math.random() < 0.30) return scored[1].i;
+    return scored[0].i;
   }
-  return move;
+
+  // Hard AI: randomise opening to avoid always playing the same game
+  const filled = b.filter(v => v).length;
+  if (filled === 0) return [0, 2, 4, 6, 8][randInt(5)];
+  if (filled === 1 && b[4] === null && Math.random() < 0.6) return 4;
+  return scored[0].i;
 }
 
 function scheduleAI() {
