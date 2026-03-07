@@ -1572,12 +1572,12 @@ function showMatchVictory(winner) {
    Central game-loop function — called by both
    human clicks and the AI after its delay.
 ───────────────────────────────────────────── */
-function handleClick(i) {
+function handleClick(i, fromAI = false) {
   const { board, currentPlayer } = gameState;
 
   // Guards
   if (gameState.gameOver || board[i] || aiThinking || chaosState.lagActive) return;
-  if (aiMode && currentPlayer === HINDU) return;
+  if (!fromAI && aiMode && currentPlayer === HINDU) return;
   if (chaosMode && chaosHas('holy-ground') && chaosState.holyCell === i) {
     sfxChaos('holy-ground');
     showChaosEvent('⛪ HOLY GROUND! That sacred cell is divinely forbidden!', 1600);

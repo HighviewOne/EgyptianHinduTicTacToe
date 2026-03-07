@@ -71,7 +71,7 @@ function scheduleAI() {
     if (!aiThinking) return;
     aiThinking = false;
     boardEl.classList.remove('ai-thinking');
-    handleClick(getBestMove([...gameState.board]));
+    handleClick(getBestMove([...gameState.board]), true);
   }, delay);
 }
 
