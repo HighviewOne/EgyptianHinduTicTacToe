@@ -573,6 +573,10 @@ function renderBoard(winCells = []) {
   boardEl.innerHTML = '';
   // Keep hover-preview symbol current with the active player
   boardEl.style.setProperty('--hover-sym-display', `"${SYMBOLS[gameState.currentPlayer] || ''}"`);
+  const _hoverInk = gameState.currentPlayer === EGYPT
+    ? (currentTheme.p1ink || '#9b3b14')
+    : (currentTheme.p2ink || '#3a4a8a');
+  boardEl.style.setProperty('--hover-ink', _hoverInk);
 
   gameState.board.forEach((val, i) => {
     const cell = document.createElement('div');
@@ -584,8 +588,19 @@ function renderBoard(winCells = []) {
       cell.classList.add('taken', `${val}-cell`);
       const _fogHide = fogMode && !gameState.gameOver
         && val !== gameState.currentPlayer;
-      cell.textContent = _fogHide ? '●' : SYMBOLS[val];
-      if (_fogHide) cell.classList.add('fog-hidden');
+      if (_fogHide) {
+        cell.classList.add('fog-hidden');
+        cell.textContent = '●';
+      } else {
+        const ink = val === EGYPT
+          ? (currentTheme.p1ink || currentTheme.players.egypt.primary || '#9b3b14')
+          : (currentTheme.p2ink || currentTheme.players.hindu.primary || '#3a4a8a');
+        const sym = document.createElement('span');
+        sym.className = 'cell-sym';
+        sym.textContent = SYMBOLS[val];
+        sym.style.color = ink;
+        cell.appendChild(sym);
+      }
     } else {
       // Coordinate label on empty cells
       const _cl = document.createElement('span');
@@ -613,6 +628,8 @@ function renderBoard(winCells = []) {
     if (!spectatorMode) cell.addEventListener('click', () => handleClick(i));
     boardEl.appendChild(cell);
   });
+  // Inject SVG grid lines after layout via rAF
+  requestAnimationFrame(() => injectGridLines());
 }
 
 /* ─────────────────────────────────────────────
@@ -648,42 +665,102 @@ function setAura(player, win = false) {
 }
 
 /* ─────────────────────────────────────────────
+   SVG grid lines (injected after board renders)
+───────────────────────────────────────────── */
+function injectGridLines() {
+  const existing = boardEl.querySelector('.grid-lines-svg');
+  if (existing) existing.remove();
+  const cells = boardEl.querySelectorAll('.cell');
+  if (!cells.length) return;
+  const bRect = boardEl.getBoundingClientRect();
+  const W = bRect.width || 300, H = bRect.height || 300;
+  if (W < 10) return;
+  const r0 = cells[0].getBoundingClientRect();
+  const r1 = cells[1].getBoundingClientRect();
+  const r3 = cells[3].getBoundingClientRect();
+  const r6 = cells[6] ? cells[6].getBoundingClientRect() : null;
+  if (!r0.width) return;
+  const vx1 = (r0.right + r1.left) / 2 - bRect.left;
+  const vx2 = (r1.right + cells[2].getBoundingClientRect().left) / 2 - bRect.left;
+  const hy1 = (r0.bottom + r3.top) / 2 - bRect.top;
+  const hy2 = r6 ? (cells[3].getBoundingClientRect().bottom + r6.top) / 2 - bRect.top : hy1 * 2;
+  const ov = 14;
+  const ink = getComputedStyle(document.documentElement).getPropertyValue('--ink').trim() || '#2a1a08';
+  const j = s => (Math.sin(s * 12.9898 + 43758.5453) % 1) * 2 - 1;
+  const lp = (x1, y1, x2, y2, s) =>
+    `M ${(x1+j(s+2)*1.2).toFixed(1)} ${(y1+j(s+3)*1.2).toFixed(1)} Q ${((x1+x2)/2+j(s)*1.5).toFixed(1)} ${((y1+y2)/2+j(s+1)*1.5).toFixed(1)} ${(x2+j(s+4)*1.2).toFixed(1)} ${(y2+j(s+5)*1.2).toFixed(1)}`;
+  const svg = `<svg class="grid-lines-svg" viewBox="0 0 ${W.toFixed(0)} ${H.toFixed(0)}" aria-hidden="true"><defs><filter id="gl-bleed" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="1.2" numOctaves="2" seed="3"/><feDisplacementMap in="SourceGraphic" scale="2.4"/></filter></defs><g filter="url(#gl-bleed)" stroke="${ink}" stroke-width="2.6" stroke-linecap="round" fill="none" opacity="0.68"><path d="${lp(vx1,-ov,vx1,H+ov,1)}"/><path d="${lp(vx2,-ov,vx2,H+ov,2)}"/><path d="${lp(-ov,hy1,W+ov,hy1,3)}"/><path d="${lp(-ov,hy2,W+ov,hy2,4)}"/></g><g stroke="${ink}" stroke-width="0.7" stroke-linecap="round" fill="none" opacity="0.32"><path d="${lp(vx1,-ov,vx1,H+ov,5)}"/><path d="${lp(vx2,-ov,vx2,H+ov,6)}"/><path d="${lp(-ov,hy1,W+ov,hy1,7)}"/><path d="${lp(-ov,hy2,W+ov,hy2,8)}"/></g></svg>`;
+  boardEl.insertAdjacentHTML('beforeend', svg);
+}
+
+/* ─────────────────────────────────────────────
    Win-line animation
 ───────────────────────────────────────────── */
 function drawWinLine(cells, winner) {
-  const wrapperRect = boardEl.parentElement.getBoundingClientRect();
-  const r1 = boardEl.children[cells[0]].getBoundingClientRect();
-  const r2 = boardEl.children[cells[cells.length - 1]].getBoundingClientRect();
+  // Remove any existing SVG win line
+  const old = boardEl.querySelector('.win-line-svg');
+  if (old) old.remove();
 
-  const x1 = r1.left + r1.width  / 2 - wrapperRect.left;
-  const y1 = r1.top  + r1.height / 2 - wrapperRect.top;
-  const x2 = r2.left + r2.width  / 2 - wrapperRect.left;
-  const y2 = r2.top  + r2.height / 2 - wrapperRect.top;
+  const bRect = boardEl.getBoundingClientRect();
+  const W = bRect.width || 300, H = bRect.height || 300;
+  const cellEls = boardEl.querySelectorAll('.cell');
+  if (!cellEls[cells[0]] || !cellEls[cells[cells.length-1]]) return;
 
-  const length = Math.hypot(x2 - x1, y2 - y1);
-  const angle  = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
-  const rgb    = winner === EGYPT
-    ? currentTheme.players.egypt.vars['--p1-rgb']
-    : currentTheme.players.hindu.vars['--p2-rgb'];
-  const color  = `rgba(${rgb},0.9)`;
+  const r1 = cellEls[cells[0]].getBoundingClientRect();
+  const r2 = cellEls[cells[cells.length-1]].getBoundingClientRect();
+  const x1 = r1.left + r1.width/2 - bRect.left;
+  const y1 = r1.top + r1.height/2 - bRect.top;
+  const x2 = r2.left + r2.width/2 - bRect.left;
+  const y2 = r2.top + r2.height/2 - bRect.top;
+  const dx = x2-x1, dy = y2-y1, len = Math.sqrt(dx*dx+dy*dy) || 1;
+  const ov = Math.min(20, len * 0.1);
+  const px = -dy/len*4, py = dx/len*4;
+  const d = `M ${(x1-dx/len*ov).toFixed(1)} ${(y1-dy/len*ov).toFixed(1)} Q ${((x1+x2)/2+px).toFixed(1)} ${((y1+y2)/2+py).toFixed(1)} ${(x2+dx/len*ov).toFixed(1)} ${(y2+dy/len*ov).toFixed(1)}`;
+  const color = winner === EGYPT
+    ? (currentTheme.p1ink || `rgba(${currentTheme.players.egypt.vars['--p1-rgb']},0.9)`)
+    : (currentTheme.p2ink || `rgba(${currentTheme.players.hindu.vars['--p2-rgb']},0.9)`);
+  const svg = `<svg class="win-line-svg" viewBox="0 0 ${W.toFixed(0)} ${H.toFixed(0)}" aria-hidden="true"><defs><filter id="wl-bleed" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="1.4" numOctaves="2" seed="5"/><feDisplacementMap in="SourceGraphic" scale="2.2"/></filter></defs><path d="${d}" stroke="${color}" stroke-width="9" stroke-linecap="round" fill="none" opacity="0.82" filter="url(#wl-bleed)" class="win-line-path" pathLength="1"/><path d="${d}" stroke="${color}" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.38" class="win-line-path" pathLength="1" style="animation-delay:120ms"/></svg>`;
+  boardEl.insertAdjacentHTML('beforeend', svg);
 
-  winLineEl.classList.remove('animate');
-  winLineEl.style.cssText = [
-    'display:block',
-    `left:${x1}px`,
-    `top:${y1}px`,
-    `width:${length}px`,
-    `transform:translateY(-50%) rotate(${angle}deg)`,
-    `background:${color}`,
-    `color:${color}`,
-  ].join(';');
-  void winLineEl.offsetWidth; // force reflow
-  winLineEl.classList.add('animate');
+  // Show win seal after win line draws
+  setTimeout(() => showWinSeal(winner), 900);
 }
 
+
 function clearWinLine() {
+  const svgLine = boardEl.querySelector('.win-line-svg');
+  if (svgLine) svgLine.remove();
   winLineEl.style.display = 'none';
   winLineEl.classList.remove('animate');
+}
+
+/* ─────────────────────────────────────────────
+   Win Seal — papyrus stamp card overlay
+───────────────────────────────────────────── */
+function showWinSeal(winner) {
+  const seal = document.getElementById('win-seal');
+  if (!seal) return;
+  const isDraw = winner === 'draw';
+  const p = isDraw ? null : currentTheme.players[winner];
+  const ink = isDraw
+    ? (currentTheme.ink || '#2a1a08')
+    : (winner === EGYPT ? (currentTheme.p1ink || '#9b3b14') : (currentTheme.p2ink || '#3a4a8a'));
+  const stampEl  = document.getElementById('win-seal-stamp');
+  const cryEl    = document.getElementById('win-seal-cry');
+  const lineEl   = document.getElementById('win-seal-line');
+  const cardEl   = seal.querySelector('.win-seal-card');
+  const btnEl    = document.getElementById('win-seal-btn');
+  if (stampEl)  { stampEl.textContent = isDraw ? '⚖' : (p.symbol || '?'); stampEl.style.color = ink; stampEl.style.borderColor = ink; }
+  if (cryEl)    { cryEl.textContent = isDraw ? 'A SACRED DRAW' : (p.winCry || p.name + ' WINS!'); cryEl.style.color = ink; }
+  if (lineEl)   lineEl.textContent = isDraw ? 'Both armies retreat with honor intact.' : (p.winLine || (p.winMsgs ? p.winMsgs[0].replace(/^🏆\s*/,'') : ''));
+  if (cardEl)   cardEl.style.borderColor = ink;
+  if (btnEl)    { btnEl.style.borderColor = ink; btnEl.style.color = ink; }
+  seal.classList.add('visible');
+}
+
+function hideWinSeal() {
+  const seal = document.getElementById('win-seal');
+  if (seal) seal.classList.remove('visible');
 }
 
 /* ─────────────────────────────────────────────
@@ -1021,7 +1098,14 @@ function replayGame() {
       cell.className = 'cell';
       if (val) {
         cell.classList.add('taken', `${val}-cell`);
-        cell.textContent = SYMBOLS[val];
+        const ink = val === EGYPT
+          ? (currentTheme.p1ink || '#9b3b14')
+          : (currentTheme.p2ink || '#3a4a8a');
+        const sym = document.createElement('span');
+        sym.className = 'cell-sym';
+        sym.textContent = SYMBOLS[val];
+        sym.style.color = ink;
+        cell.appendChild(sym);
         // Highlight the newly placed piece
         if (step > 0 && snap[i] !== snapshots[step - 1][i]) cell.classList.add('fresh');
       }
@@ -1527,6 +1611,32 @@ function applyTheme(key) {
     tickMelody();
   }
 
+  // Set papyrus CSS vars from theme data
+  const t = THEMES[key];
+  if (t.paper) {
+    root.setProperty('--paper', t.paper);
+    root.setProperty('--paper-dark', t.paperDark);
+    root.setProperty('--paper-shadow', t.paperShadow);
+    root.setProperty('--ink', t.ink);
+    root.setProperty('--accent', t.accent);
+    root.setProperty('--p1-ink', t.p1ink);
+    root.setProperty('--p1-soft', t.p1soft);
+    root.setProperty('--p2-ink', t.p2ink);
+    root.setProperty('--p2-soft', t.p2soft);
+  }
+  // Update masthead subtitle
+  const mastSub = document.getElementById('masthead-sub');
+  if (mastSub) mastSub.textContent = (t.label || '').replace(/^[^ ]+ /, '');
+
+  // Update border ornaments
+  updateBorderOrnaments(key);
+
+  // Update board stage corner glyphs
+  updateBoardCorners(key);
+
+  // Update player card corner glyphs and rules
+  updatePlayerCardDetails(key);
+
   // Cancel any AI thinking from the previous theme/round
   aiThinking = false;
   boardEl.classList.remove('ai-thinking');
@@ -1534,6 +1644,74 @@ function applyTheme(key) {
   resetScores();
   showIntro();
   savePrefs();
+}
+
+/* ─────────────────────────────────────────────
+   Papyrus helper functions
+───────────────────────────────────────────── */
+function getBorderSVG(pattern, ink, opacity, flip) {
+  const f = flip ? ' transform="scale(1,-1) translate(0,-32)"' : '';
+  if (pattern === 'wave') {
+    return `<svg class="border-svg" viewBox="0 0 400 32" preserveAspectRatio="none" aria-hidden="true"${f}><defs><filter id="b-w-ink"><feTurbulence type="fractalNoise" baseFrequency="0.6" numOctaves="2" seed="3"/><feDisplacementMap in="SourceGraphic" scale="0.6"/></filter></defs><g filter="url(#b-w-ink)" stroke="${ink}" stroke-width="1.4" fill="none" stroke-linecap="round" opacity="${opacity}"><path d="M0 16 Q 10 4 20 16 T 40 16 T 60 16 T 80 16 T 100 16 T 120 16 T 140 16 T 160 16 T 180 16 T 200 16 T 220 16 T 240 16 T 260 16 T 280 16 T 300 16 T 320 16 T 340 16 T 360 16 T 380 16 T 400 16"/><path d="M0 22 Q 10 14 20 22 T 40 22 T 60 22 T 80 22 T 100 22 T 120 22 T 140 22 T 160 22 T 180 22 T 200 22 T 220 22 T 240 22 T 260 22 T 280 22 T 300 22 T 320 22 T 340 22 T 360 22 T 380 22 T 400 22" opacity="0.5"/></g></svg>`;
+  }
+  if (pattern === 'simple') {
+    return `<svg class="border-svg" viewBox="0 0 400 32" preserveAspectRatio="none" aria-hidden="true"${f}><defs><filter id="b-s-ink"><feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="2" seed="3"/><feDisplacementMap in="SourceGraphic" scale="0.7"/></filter></defs><g filter="url(#b-s-ink)" stroke="${ink}" stroke-width="1.4" fill="none" stroke-linecap="round" opacity="${opacity}"><line x1="0" y1="10" x2="400" y2="10"/><line x1="0" y1="14" x2="400" y2="14" stroke-width="0.6"/><line x1="0" y1="22" x2="400" y2="22"/>${Array.from({length:20},(_,i)=>`<circle cx="${10+i*20}" cy="18" r="0.8" fill="${ink}" stroke="none"/>`).join('')}</g></svg>`;
+  }
+  // meander (default)
+  const tileW = 28;
+  const paths = Array.from({length:15},(_,i)=>{const x=i*tileW;return`<path d="M${x} 4 L${x+22} 4 L${x+22} 22 L${x+8} 22 L${x+8} 12 L${x+16} 12 L${x+16} 18"/>`;}).join('');
+  return `<svg class="border-svg" viewBox="0 0 400 32" preserveAspectRatio="none" aria-hidden="true"${f}><defs><filter id="b-m-ink"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" seed="3"/><feDisplacementMap in="SourceGraphic" scale="0.8"/></filter></defs><g filter="url(#b-m-ink)" stroke="${ink}" stroke-width="1.6" fill="none" stroke-linecap="round" opacity="${opacity}">${paths}<line x1="0" y1="28" x2="400" y2="28"/></g></svg>`;
+}
+
+function updateBorderOrnaments(key) {
+  const t = THEMES[key];
+  if (!t) return;
+  const ink = t.ink || '#2a1a08';
+  const pattern = t.border || 'meander';
+  const topEl = document.getElementById('hborder-top');
+  const botEl = document.getElementById('hborder-bot');
+  if (topEl) topEl.innerHTML = getBorderSVG(pattern, ink, 0.5, false);
+  if (botEl) botEl.innerHTML = getBorderSVG(pattern, ink, 0.5, true);
+}
+
+function updateBoardCorners(key) {
+  const t = THEMES[key];
+  if (!t) return;
+  const p1 = t.players.egypt, p2 = t.players.hindu;
+  const p1color = t.p1ink || '#9b3b14';
+  const p2color = t.p2ink || '#3a4a8a';
+  const corners = [
+    ['bc-tl', p1.cornerGlyphs?.[0] || '', p1color],
+    ['bc-tr', p2.cornerGlyphs?.[0] || '', p2color],
+    ['bc-bl', p1.cornerGlyphs?.[1] || '', p1color],
+    ['bc-br', p2.cornerGlyphs?.[1] || '', p2color],
+  ];
+  corners.forEach(([id, glyph, color]) => {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = glyph; el.style.color = color; }
+  });
+}
+
+function updatePlayerCardDetails(key) {
+  const t = THEMES[key];
+  if (!t) return;
+  const p1 = t.players.egypt, p2 = t.players.hindu;
+  const p1color = t.p1ink || '#9b3b14';
+  const p2color = t.p2ink || '#3a4a8a';
+  // Player card corner glyphs
+  [['egypt', p1, p1color], ['hindu', p2, p2color]].forEach(([side, p, color]) => {
+    const glyphs = p.cornerGlyphs || [];
+    ['tl','tr','bl','br'].forEach((pos, i) => {
+      const el = document.getElementById(`pcc-${side}-${pos}`);
+      if (el) { el.textContent = glyphs[i] || ''; el.style.color = color; }
+    });
+    // Update pc-rule color
+    const card = document.getElementById(`card-${side}`);
+    if (card) {
+      const rule = card.querySelector('.pc-rule');
+      if (rule) rule.style.background = `repeating-linear-gradient(90deg, ${color} 0 6px, transparent 6px 14px)`;
+    }
+  });
 }
 
 /* ─────────────────────────────────────────────
@@ -1829,6 +2007,7 @@ function handleClick(i, fromAI = false) {
       cardEgypt.classList.remove('active-turn', 'winner-glow');
       cardHindu.classList.remove('active-turn', 'winner-glow');
       setAura(null);
+      setTimeout(() => showWinSeal('draw'), 600);
       updateAllTimeStats('draw');
       updateMatchPips();
       updateStreakBadges();
@@ -2033,6 +2212,7 @@ function handleClick(i, fromAI = false) {
 ───────────────────────────────────────────── */
 function newRound() {
   clearGameSave();
+  hideWinSeal();
   resetBoard();
   clearWinLine();
   clearTimer();
@@ -2268,6 +2448,10 @@ document.addEventListener('keydown', e => {
 ───────────────────────────────────────────── */
 document.getElementById('btn-restart').addEventListener('click', newRound);
 document.getElementById('btn-reset').addEventListener('click', resetScores);
+document.getElementById('win-seal-btn').addEventListener('click', () => {
+  hideWinSeal();
+  newRound();
+});
 document.getElementById('btn-music').addEventListener('click', toggleMusic);
 document.getElementById('vol-slider').addEventListener('input', e => { setVolume(e.target.value / 100); savePrefs(); });
 document.getElementById('vol-music').addEventListener('input',  e => { setMusicVolume(e.target.value / 100); savePrefs(); });

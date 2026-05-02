@@ -9,6 +9,10 @@
 const THEMES = {
   'egypt-hindu': {
     label: '☥ Egypt vs India',
+    paper: '#f1dfb1', paperDark: '#d8be84', paperShadow: '#a98447',
+    ink: '#2a1a08', accent: '#8a4a1a',
+    p1ink: '#9b3b14', p1soft: '#c97a3d', p2ink: '#3a4a8a', p2soft: '#6a7ac0',
+    border: 'meander',
     corners: ['𓂀','ॐ','☥','🪷'],
     footer:  ['𓂀','☥','𓆙','ॐ','🪷','🔱'],
     loreFacts: [
@@ -28,6 +32,9 @@ const THEMES = {
     players: {
       egypt: {
         symbol: '☥', name: 'Egypt', title: "Pharaoh's Ankh",
+        cornerGlyphs: ['𓂀','𓆣','☥','𓋹'],
+        winCry: 'RA ASCENDS',
+        winLine: "The Pharaoh's enemies are scattered to sand.",
         lore:   "Keepers of sacred hieroglyphs, born of the Nile's eternal tide",
         intro:  "Ra descends from the eternal sun, golden and terrible...",
         label:  "Egypt's turn — Place the Ankh ☥",
@@ -43,6 +50,9 @@ const THEMES = {
       },
       hindu: {
         symbol: 'ॐ', name: 'India', title: 'Divine Om',
+        cornerGlyphs: ['ॐ','🪷','🔱','✨'],
+        winCry: 'OM RESONATES',
+        winLine: 'Vishnu has added this to his thousand accomplishments.',
         lore:   'Weavers of cosmic order, guardians of the divine syllable',
         intro:  "Vishnu stirs from a thousand-year cosmic slumber...",
         label:  "India's turn — Invoke the Om ॐ",
@@ -60,6 +70,10 @@ const THEMES = {
   },
   'classic': {
     label: '✕ Classic X / O',
+    paper: '#ece2cf', paperDark: '#c8bca5', paperShadow: '#8a7d62',
+    ink: '#1a1a1a', accent: '#3a3a3a',
+    p1ink: '#1a3a6a', p1soft: '#4a6aa0', p2ink: '#8a1a1a', p2soft: '#c04a4a',
+    border: 'simple',
     corners: ['✕','○','✕','○'],
     footer:  ['✕','○','✕','○','✕','○'],
     loreFacts: [
@@ -78,6 +92,9 @@ const THEMES = {
     },
     players: {
       egypt: { symbol:'✕', name:'X', title:'Crosses',
+               cornerGlyphs: ['✕','✦','✚','✕'],
+               winCry: 'X CLAIMS THE FIELD',
+               winLine: 'Cold. Calculated. Absolutely ruthless.',
                lore:'Crisp and decisive — the mark of the bold',
                intro:'X steps into the arena. No words. Just X.',
                label:"X's turn — Place the Cross",
@@ -89,6 +106,9 @@ const THEMES = {
                       '--egypt-dark':'#0A1A2A','--egypt-brown':'#1A3A5A','--egypt-teal':'#0288D1',
                       '--p1-rgb':'79,195,247' } },
       hindu: { symbol:'○', name:'O', title:'Noughts',
+               cornerGlyphs: ['○','◯','◉','○'],
+               winCry: 'THE CIRCLE CLOSES',
+               winLine: 'Round and round we go. Round to victory.',
                lore:'Complete and eternal — the unbroken circle',
                intro:'O arrives. Perfect. Complete. Circular.',
                label:"O's turn — Place the Circle",
@@ -103,6 +123,10 @@ const THEMES = {
   },
   'greek-norse': {
     label: '⚡ Greek vs Norse',
+    paper: '#e8dcc0', paperDark: '#bfb091', paperShadow: '#7a6a48',
+    ink: '#1a1408', accent: '#5a4a1a',
+    p1ink: '#a06a14', p1soft: '#c89a3a', p2ink: '#3a5a8a', p2soft: '#6a8aba',
+    border: 'meander',
     corners: ['⚡','⚔️','🏛','🐺'],
     footer:  ['⚡','🏛','⚔️','🐺','🌩','🛡'],
     loreFacts: [
@@ -121,6 +145,9 @@ const THEMES = {
     },
     players: {
       egypt: { symbol:'⚡', name:'Greece', title:"Zeus's Thunder",
+               cornerGlyphs: ['Ω','Δ','Ψ','Φ'],
+               winCry: 'OLYMPUS QUAKES',
+               winLine: 'Lightning has struck. The insurance claims are astronomical.',
                lore:'Heirs of Olympus, where gods walk among mortals',
                intro:"Zeus charges his thunderbolts. He's been waiting for this.",
                label:"Greece's turn — Cast the Thunder ⚡",
@@ -132,6 +159,9 @@ const THEMES = {
                       '--egypt-dark':'#1A1400','--egypt-brown':'#6A5A00','--egypt-teal':'#4A90E2',
                       '--p1-rgb':'255,215,0' } },
       hindu: { symbol:'⚔️', name:'Norse', title:"Odin's Blade",
+               cornerGlyphs: ['ᚠ','ᚱ','ᚦ','ᚷ'],
+               winCry: 'VALHALLA FEASTS',
+               winLine: "Odin opens his one remaining eye. He saw this coming.",
                lore:'Children of Yggdrasil, forged in the fires of Ragnarök',
                intro:"Odin opens his one remaining eye. He's seen this coming.",
                label:"Norse's turn — Swing the Blade ⚔️",
@@ -146,6 +176,10 @@ const THEMES = {
   },
   'dragon-phoenix': {
     label: '🐉 Dragon vs Phoenix',
+    paper: '#f0d8b8', paperDark: '#caa980', paperShadow: '#8a5a30',
+    ink: '#2a0a0a', accent: '#8a2a1a',
+    p1ink: '#a01a1a', p1soft: '#c45a3a', p2ink: '#c46a14', p2soft: '#e89a44',
+    border: 'wave',
     corners: ['龍','鳳','🐉','🌟'],
     footer:  ['龍','🐉','🌟','鳳','🌸','☁'],
     loreFacts: [
@@ -165,6 +199,9 @@ const THEMES = {
     players: {
       egypt: {
         symbol: '龍', name: 'Dragon', title: "Heaven's Claw",
+        cornerGlyphs: ['龍','雲','雷','海'],
+        winCry: 'THE DRAGON ASCENDS',
+        winLine: 'Heaven shakes; earth trembles; the board collapses into legend.',
         lore:   'Lord of storms and rivers, sovereign of the nine celestial courts',
         intro:  "The Dragon uncoils from ten thousand years of slumber...",
         label:  "Dragon's turn — Strike with the Claw 龍",
@@ -180,6 +217,9 @@ const THEMES = {
       },
       hindu: {
         symbol: '鳳', name: 'Phoenix', title: 'Eternal Flame',
+        cornerGlyphs: ['鳳','火','花','光'],
+        winCry: 'THE PHOENIX RISES',
+        winLine: 'From sacred flames a champion emerges, immaculate.',
         lore:   'Born of sacred fire, whose song silences all other music',
         intro:  "The Phoenix lands. The air tastes of cinnamon and destiny.",
         label:  "Phoenix's turn — Rise from the Flame 鳳",
@@ -197,6 +237,10 @@ const THEMES = {
   },
   'samurai-ninja': {
     label: '⚔ Samurai vs Ninja',
+    paper: '#e6dac4', paperDark: '#beb094', paperShadow: '#6a5e44',
+    ink: '#0a0a0a', accent: '#4a3a2a',
+    p1ink: '#a0301a', p1soft: '#c4604a', p2ink: '#2a2a2a', p2soft: '#5a5a5a',
+    border: 'simple',
     corners: ['⛩','🥷','⚔','🌸'],
     footer:  ['⛩','⚔','🌸','🥷','🗡','🌙'],
     loreFacts: [
@@ -215,6 +259,9 @@ const THEMES = {
     },
     players: {
       egypt: { symbol:'⛩', name:'Samurai', title:'Bushido Code',
+               cornerGlyphs: ['武','士','刀','心'],
+               winCry: 'HONOR IS CLAIMED',
+               winLine: 'The blade was drawn so fast you only heard a faint breeze.',
                lore:'Honor bound by Bushido, blade swift as the storm',
                intro:"The Samurai rose before dawn. They've been ready for hours.",
                label:"Samurai's turn — Draw the Katana ⛩",
@@ -226,6 +273,9 @@ const THEMES = {
                       '--egypt-dark':'#1A0000','--egypt-brown':'#5A1A1A','--egypt-teal':'#CC0000',
                       '--p1-rgb':'255,68,68' } },
       hindu: { symbol:'🥷', name:'Ninja', title:'Shadow Art',
+               cornerGlyphs: ['忍','影','夜','月'],
+               winCry: 'UNSEEN. INEVITABLE.',
+               winLine: 'You never saw it coming. That was entirely the point.',
                lore:'Masters of shadow and silence, where darkness is home',
                intro:"The Ninja was already here. You just couldn't see them.",
                label:"Ninja's turn — Strike from Shadow 🥷",
