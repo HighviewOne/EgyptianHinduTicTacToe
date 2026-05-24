@@ -1,18 +1,47 @@
+<div align="center">
+
+<img src="demo.gif" alt="Egyptian Hindu Tic-Tac-Toe gameplay" width="360"/>
+
 # Egyptian & Hindu Tic-Tac-Toe
 ### Battle of the Ancient Realms
+
+[![CI](https://github.com/HighviewOne/EgyptianHinduTicTacToe/actions/workflows/ci.yml/badge.svg)](https://github.com/HighviewOne/EgyptianHinduTicTacToe/actions/workflows/ci.yml)
+[![Deploy](https://github.com/HighviewOne/EgyptianHinduTicTacToe/actions/workflows/pages.yml/badge.svg)](https://github.com/HighviewOne/EgyptianHinduTicTacToe/actions/workflows/pages.yml)
+[![Tests](https://img.shields.io/badge/Tests-29%20passing-brightgreen?style=flat-square)](gameLogic.test.js)
+[![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
 
 ![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat-square&logo=html5&logoColor=white)
 ![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=flat-square&logo=css3&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat-square&logo=javascript&logoColor=black)
 ![PWA](https://img.shields.io/badge/PWA-5A0FC8?style=flat-square&logo=pwa&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
-![Tests](https://img.shields.io/badge/Tests-29%20passing-brightgreen?style=flat-square)
-![Achievements](https://img.shields.io/badge/Achievements-18-gold?style=flat-square)
-![GitHub Pages](https://img.shields.io/badge/Deployed-GitHub%20Pages-blue?style=flat-square&logo=github)
 
 A fully-featured browser Tic-Tac-Toe game with **cinematic cultural themes**, a **strategic minimax AI**, **13 Chaos rules**, **procedural Web Audio music**, **18 achievements**, and a full progression system — built in vanilla HTML / CSS / JS with zero dependencies.
 
 **[▶ Play Live](https://highviewone.github.io/EgyptianHinduTicTacToe/)** · Installable PWA · Works offline
+
+</div>
+
+---
+
+## Table of Contents
+
+- [Quick Start](#quick-start)
+- [What Makes This Special](#what-makes-this-special)
+- [Themes](#themes)
+- [Game Modes](#game-modes)
+- [Chaos Mode](#-chaos-mode)
+- [Fun Modes](#fun-modes)
+- [Board Skins](#board-skins)
+- [Tournament Mode](#tournament-mode)
+- [Achievements](#achievements)
+- [All-Time Stats](#all-time-stats)
+- [Keyboard Shortcuts](#keyboard-shortcuts)
+- [Procedural Music](#procedural-music)
+- [Tech Stack](#tech-stack)
+- [File Structure](#file-structure)
+- [Running Locally](#running-locally)
+- [Deploying Your Fork](#deploying-your-fork)
+- [License](#license)
 
 ---
 
@@ -128,7 +157,7 @@ Select **Best of 3 / 5 / 7** from the Match row. Pip indicators on each player c
 
 ## Achievements
 
-17 unlockable achievements stored in `localStorage`. A slide-in toast confirms each unlock; multiple unlocks queue gracefully.
+18 unlockable achievements stored in `localStorage`. A slide-in toast confirms each unlock; multiple unlocks queue gracefully.
 
 | Achievement | Condition |
 |---|---|
