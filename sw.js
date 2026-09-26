@@ -1,7 +1,9 @@
 /* ─────────────────────────────────────────────
-   Service Worker — offline-first cache
+   Service Worker — network-first, cache fallback
+   Online players always get the latest deploy;
+   the cache keeps the game playable offline.
 ───────────────────────────────────────────── */
-const CACHE  = 'ehttt-v1';
+const CACHE  = 'ehttt-v2';
 const ASSETS = [
   '.',
   'index.html',
@@ -32,7 +34,17 @@ self.addEventListener('activate', ev => {
 });
 
 self.addEventListener('fetch', ev => {
+  const req = ev.request;
+  if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
   ev.respondWith(
-    caches.match(ev.request).then(r => r || fetch(ev.request))
+    fetch(req)
+      .then(res => {
+        if (res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE).then(c => c.put(req, copy));
+        }
+        return res;
+      })
+      .catch(() => caches.match(req).then(r => r || caches.match('index.html')))
   );
 });
