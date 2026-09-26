@@ -613,9 +613,11 @@ function renderBoard(winCells = []) {
   gameState.board.forEach((val, i) => {
     const cell = document.createElement('div');
     cell.className = 'cell';
-    cell.setAttribute('role', 'gridcell');
+    cell.setAttribute('role', 'button');
+    const _pos = POS_LABELS[i] || `${i + 1}`;
+    const _fogged = val && fogMode && !gameState.gameOver && val !== gameState.currentPlayer;
     cell.setAttribute('aria-label',
-      val ? `${currentTheme.players[val].name} at position ${i + 1}` : `Empty position ${i + 1}`);
+      !val ? `${_pos}, empty` : _fogged ? `${_pos}, hidden piece` : `${_pos}, ${currentTheme.players[val].name}`);
     if (val) {
       cell.classList.add('taken', `${val}-cell`);
       const _fogHide = fogMode && !gameState.gameOver
@@ -1333,6 +1335,7 @@ function startTimer() {
 function burstParticles(winner) {
   const canvas = document.getElementById('confetti-canvas');
   if (!canvas) return;
+  if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const ctx = canvas.getContext('2d');
   canvas.width  = window.innerWidth;
   canvas.height = window.innerHeight;
@@ -2511,6 +2514,7 @@ document.addEventListener('keydown', e => {
     document.getElementById('shortcut-help').classList.remove('visible');
     document.getElementById('analysis-modal').classList.remove('visible');
     document.getElementById('achievements-modal').classList.remove('visible');
+    document.getElementById('lore-modal').classList.remove('visible');
     document.getElementById('chaos-config-panel').style.display = 'none';
     return;
   }
@@ -2805,6 +2809,45 @@ btnInstall.addEventListener('click', async () => {
 window.addEventListener('appinstalled', () => {
   btnInstall.style.display = 'none';
   deferredInstallPrompt = null;
+});
+
+/* ─────────────────────────────────────────────
+   Accessibility wiring
+───────────────────────────────────────────── */
+// Toggle buttons show on/off only by colour; mirror it into aria-pressed.
+function syncPressed(btn) {
+  btn.setAttribute('aria-pressed', String(btn.classList.contains('active') || btn.classList.contains('on')));
+}
+const _pressedObserver = new MutationObserver(ms => ms.forEach(m => syncPressed(m.target)));
+document.querySelectorAll('.mode-btn, .match-btn, .theme-btn, .skin-btn, .fun-btn:not(#btn-fullscreen):not(#btn-install)')
+  .forEach(btn => {
+    syncPressed(btn);
+    _pressedObserver.observe(btn, { attributes: true, attributeFilter: ['class'] });
+  });
+
+// Dialogs open/close by toggling .visible. While closed they're only faded
+// out, so make them inert (not focusable / not read out); when one opens,
+// move focus into it and put focus back where it was when it closes.
+['win-seal', 'match-victory', 'stats-modal', 'analysis-modal',
+ 'achievements-modal', 'lore-modal', 'shortcut-help'].forEach(id => {
+  const dlg = document.getElementById(id);
+  if (!dlg) return;
+  let isOpen = false, returnTo = null;
+  const sync = () => {
+    const open = dlg.classList.contains('visible');
+    const hadFocus = dlg.contains(document.activeElement);  // check before inert drops it
+    dlg.toggleAttribute('inert', !open);
+    if (open === isOpen) return;
+    isOpen = open;
+    if (open) {
+      returnTo = document.activeElement;
+      (dlg.querySelector('button, [href], input, select') || dlg).focus();
+    } else if (hadFocus && returnTo && document.contains(returnTo)) {
+      returnTo.focus();
+    }
+  };
+  sync();
+  new MutationObserver(sync).observe(dlg, { attributes: true, attributeFilter: ['class'] });
 });
 
 /* ─────────────────────────────────────────────

@@ -1776,8 +1776,26 @@ header { width: 100%; max-width: 1240px; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;  /* infinite loops at .001ms would flicker */
     transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
   }
+  /* Highlights that only exist inside a looping animation: show them statically */
+  .cell.hint-cell    { box-shadow: inset 0 0 0 4px rgba(40,20,0,0.85), 0 0 20px rgba(40,20,0,0.3) !important; }
+  .cell.threat-egypt,
+  .cell.threat-hindu { box-shadow: inset 0 0 0 3px currentColor; opacity: .9; }
+  .cell.win-cell     { background-color: rgba(255,240,200,0.35); }
+  .player-card.egypt.winner-glow { box-shadow: 0 0 0 1px rgba(40,20,0,0.2), 0 6px 30px rgba(155,59,20,0.6); }
+  .player-card.hindu.winner-glow { box-shadow: 0 0 0 1px rgba(40,20,0,0.2), 0 6px 30px rgba(58,74,138,0.6); }
+  .player-card.egypt.match-point { box-shadow: 0 0 0 6px rgba(var(--p1-rgb), .22); }
+  .player-card.hindu.match-point { box-shadow: 0 0 0 6px rgba(var(--p2-rgb), .22); }
+}
+
+/* ── Keyboard focus for controls that reset their outline ── */
+.vol-slider:focus-visible,
+.timer-select:focus-visible {
+  outline: 2px solid var(--ink, #2a1a08);
+  outline-offset: 3px;
 }
 
 /* ── Responsive ── */

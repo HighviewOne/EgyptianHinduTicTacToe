@@ -355,3 +355,57 @@ test('Saved volume does not create a suspended AudioContext; first click resumes
   expect(log.created).toBe(1);
   expect(log.resumed).toBe(1);
 });
+
+// ─── Accessibility ────────────────────────────────────────────────────────────
+
+test('Board cells are labelled buttons with visible coordinates; fog hides pieces', () => {
+  page = bootPage();
+  page.clock.tick(INTRO_MS);
+  const cell = i => page.$('board').children[i];
+  expect(page.$('board').getAttribute('role')).toBe('group');
+  expect(cell(0).getAttribute('role')).toBe('button');
+  expect(cell(0).getAttribute('aria-label')).toBe('A1, empty');
+
+  page.clickCell(0);                       // Egypt at A1
+  expect(cell(0).getAttribute('aria-label')).toBe('A1, Egypt');
+  page.$('btn-fog').click();               // India to move: Egypt's piece is fogged
+  expect(cell(0).getAttribute('aria-label')).toBe('A1, hidden piece');
+});
+
+test('Toggle buttons expose their state via aria-pressed', async () => {
+  page = bootPage();
+  page.clock.tick(INTRO_MS);
+  const pressed = id => page.$(id).getAttribute('aria-pressed');
+  expect(pressed('mode-2p')).toBe('true');
+  expect(pressed('mode-hard')).toBe('false');
+  expect(pressed('btn-fog')).toBe('false');
+  expect(page.$('btn-install').hasAttribute('aria-pressed')).toBe(false);
+
+  page.$('mode-hard').click();
+  page.$('btn-fog').click();
+  await Promise.resolve();                 // MutationObserver callbacks are microtasks
+  expect(pressed('mode-hard')).toBe('true');
+  expect(pressed('mode-2p')).toBe('false');
+  expect(pressed('btn-fog')).toBe('true');
+});
+
+test('Dialogs: inert while closed, take focus when opened, return it on close', async () => {
+  page = bootPage();
+  page.clock.tick(INTRO_MS);
+  const lore = page.$('lore-modal');
+  expect(lore.getAttribute('role')).toBe('dialog');
+  expect(lore.hasAttribute('inert')).toBe(true);
+
+  const opener = page.$('btn-lore');
+  opener.focus();
+  opener.click();
+  await Promise.resolve();
+  expect(lore.hasAttribute('inert')).toBe(false);
+  expect(lore.contains(page.w.document.activeElement)).toBe(true);
+
+  page.key('Escape');                      // Escape now closes the Lore modal too
+  await Promise.resolve();
+  expect(lore.classList.contains('visible')).toBe(false);
+  expect(lore.hasAttribute('inert')).toBe(true);
+  expect(page.w.document.activeElement).toBe(opener);
+});
