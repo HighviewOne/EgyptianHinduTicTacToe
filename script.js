@@ -81,11 +81,22 @@ let matchTarget = 0;   // 0 = free play, 3/5/7 = best-of-N
 let gameLog   = [];   // Array of board snapshots after each move
 let replaying = false;
 let replayTimer = null;
-// Timers queued when a game ends (win seal, summary, match victory, demo
-// auto-restart). Cancelled by newRound()/undo() so they can't fire late.
-let _gameOverTimers = [];
-function afterGameOver(fn, ms) { _gameOverTimers.push(setTimeout(fn, ms)); }
-function cancelGameOverTimers() { _gameOverTimers.forEach(clearTimeout); _gameOverTimers = []; }
+// Round-scoped timers: delayed actions that belong to the current round
+// (move toasts, status restores, Divine Lag end, win seal, match victory,
+// demo auto-restart, …). newRound() and undo() cancel them all, so nothing
+// from an old round or an undone move can fire late. Use plain setTimeout
+// only for cosmetic cleanup that must always run (e.g. removing a CSS class).
+const _roundTimers = new Set();
+function roundTimeout(fn, ms) {
+  const id = setTimeout(() => { _roundTimers.delete(id); fn(); }, ms);
+  _roundTimers.add(id);
+  return id;
+}
+function cancelRoundTimers() {
+  _roundTimers.forEach(clearTimeout);
+  _roundTimers.clear();
+  clearTimeout(hintTimer);
+}
 let hintUsedThisGame  = false;   // true once showHint() fires this round
 let trailedInMatch    = false;   // true once opponent had 2+ wins while player had 0
 let spectatorMode  = false;       // AI vs AI demo mode
@@ -751,7 +762,7 @@ function drawWinLine(cells, winner) {
   boardEl.insertAdjacentHTML('beforeend', svg);
 
   // Show win seal after win line draws
-  afterGameOver(() => showWinSeal(winner), 900);
+  roundTimeout(() => showWinSeal(winner), 900);
 }
 
 
@@ -1422,6 +1433,7 @@ function undo() {
   if (!gameState.history.length || aiThinking) return;
   const snap = gameState.history.pop();
   const wasOver = gameState.gameOver;
+  cancelRoundTimers();
 
   gameState.board         = snap.board;
   gameState.currentPlayer = snap.currentPlayer;
@@ -1436,7 +1448,6 @@ function undo() {
 
   // Undoing a finished game also takes back its result (achievements stay)
   if (wasOver) {
-    cancelGameOverTimers();
     stopReplay();
     hideWinSeal();
     document.getElementById('match-victory').classList.remove('visible');
@@ -1481,11 +1492,13 @@ function undo() {
   if (timedMode && (!aiMode || gameState.currentPlayer === EGYPT)) startTimer();
 }
 
+let chaosEventTimer = null;
 function showChaosEvent(text, ms = 2600) {
   const el = document.getElementById('chaos-event');
   el.textContent = text;
   el.classList.add('visible');
-  setTimeout(() => el.classList.remove('visible'), ms);
+  clearTimeout(chaosEventTimer);
+  chaosEventTimer = setTimeout(() => el.classList.remove('visible'), ms);
 }
 
 function triggerSolarFlare() {
@@ -1975,10 +1988,10 @@ function handleClick(i, fromAI = false) {
     chaosLog.push({ icon: '⏳', name: 'Divine Lag' });
     showChaosEvent('⏳ DIVINE LAG! The celestial servers are buffering... please hold...', 3300);
     // When the lag ends, resume whichever AI was waiting (it can't start during lag).
-    const lagState = chaosState;
-    setTimeout(() => {
-      lagState.lagActive = false;
-      if (lagState === chaosState) { scheduleAI(); scheduleSpectatorAI(); }
+    roundTimeout(() => {
+      chaosState.lagActive = false;
+      scheduleAI();
+      scheduleSpectatorAI();
     }, 3000);
   }
 
@@ -2012,7 +2025,7 @@ function handleClick(i, fromAI = false) {
   if (_details.quality === 'blunder' && !_isAiMove) {
     const _lastM = moveLog[moveLog.length - 1];
     const _hint  = _lastM && _lastM.bestPos ? ` · Best: ${_lastM.bestPos}` : '';
-    setTimeout(() => showChaosEvent(`⚠ Blunder!${_hint}`, 2200), 200);
+    roundTimeout(() => showChaosEvent(`⚠ Blunder!${_hint}`, 2200), 200);
   }
 
   // ── Floating quality badge on placed cell ───────────────────────
@@ -2040,23 +2053,23 @@ function handleClick(i, fromAI = false) {
   if (_preCount === 0) {
     const _opening = _clickedI === 4 ? '⚔ Center Gambit'
                    : [0,2,6,8].includes(_clickedI) ? '♟ Corner Opening' : '◈ Edge Play';
-    setTimeout(() => showChaosEvent(_opening + '!', 1800), 350);
+    roundTimeout(() => showChaosEvent(_opening + '!', 1800), 350);
   } else if (_preCount === 1) {
     // Opponent's first response
     const _oppFirst = _snapForBadge.indexOf(_opponent);
     if (_oppFirst === 4 && [0,2,6,8].includes(_clickedI)) {
-      setTimeout(() => showChaosEvent('🪞 Mirror Denied — Center Claimed!', 2000), 350);
+      roundTimeout(() => showChaosEvent('🪞 Mirror Denied — Center Claimed!', 2000), 350);
     } else if ([0,2,6,8].includes(_oppFirst) && [0,2,6,8].includes(_clickedI)
                && _oppFirst + _clickedI === 8) {
-      setTimeout(() => showChaosEvent('⚔ Opposite Corners — Double Threat!', 2000), 350);
+      roundTimeout(() => showChaosEvent('⚔ Opposite Corners — Double Threat!', 2000), 350);
     }
   } else if (_preCount === 2) {
     const _boardNow = [..._snapForBadge]; _boardNow[_clickedI] = currentPlayer;
     const _myCorners = [0,2,6,8].filter(c => _boardNow[c] === currentPlayer);
     if (_myCorners.length === 2 && (_myCorners[0] + _myCorners[1] === 8)) {
-      setTimeout(() => showChaosEvent('⚡ Fork Setup! Danger!', 2000), 350);
+      roundTimeout(() => showChaosEvent('⚡ Fork Setup! Danger!', 2000), 350);
     } else if (_hasThreaten(_boardNow, currentPlayer)) {
-      setTimeout(() => showChaosEvent('🎯 Line Pressure!', 1800), 350);
+      roundTimeout(() => showChaosEvent('🎯 Line Pressure!', 1800), 350);
     }
   } else if (_preCount >= 3) {
     // Mid/late game: detect fork, block, or match point
@@ -2065,11 +2078,11 @@ function handleClick(i, fromAI = false) {
                        && l.includes(_clickedI) && !_snapForBadge[_clickedI]);
     const _forks     = _threatCount(_boardNow, currentPlayer);
     if (_forks >= 2) {
-      setTimeout(() => showChaosEvent('⚡ FORK! Two Threats — Unblockable!', 2400), 350);
+      roundTimeout(() => showChaosEvent('⚡ FORK! Two Threats — Unblockable!', 2400), 350);
     } else if (_blockMove) {
-      setTimeout(() => showChaosEvent('🛡 Crisis Averted! Block!', 1800), 350);
+      roundTimeout(() => showChaosEvent('🛡 Crisis Averted! Block!', 1800), 350);
     } else if (_forks === 1 && _preCount <= 4) {
-      setTimeout(() => showChaosEvent('⚡ Match Point!', 1800), 350);
+      roundTimeout(() => showChaosEvent('⚡ Match Point!', 1800), 350);
     }
   }
 
@@ -2098,7 +2111,7 @@ function handleClick(i, fromAI = false) {
       cardEgypt.classList.remove('active-turn', 'winner-glow');
       cardHindu.classList.remove('active-turn', 'winner-glow');
       setAura(null);
-      afterGameOver(() => showWinSeal('draw'), 600);
+      roundTimeout(() => showWinSeal('draw'), 600);
       updateAllTimeStats('draw');
       updateMatchPips();
       updateStreakBadges();
@@ -2107,7 +2120,7 @@ function handleClick(i, fromAI = false) {
       document.getElementById('btn-replay').style.display = '';
       document.getElementById('btn-hint').disabled = true;
       document.getElementById('btn-analysis').style.display = '';
-      afterGameOver(showGameSummary, 900);
+      roundTimeout(showGameSummary, 900);
       maybeShowTip();
     } else {
       const w = result.winner;
@@ -2141,7 +2154,7 @@ function handleClick(i, fromAI = false) {
         const fire = streak === 3
           ? `🔥 ${currentTheme.players[w].name} IS ON FIRE! THREE IN A ROW!`
           : `🔥 ${streak} IN A ROW! ${currentTheme.players[w].name} IS SIMPLY UNSTOPPABLE!`;
-        setTimeout(() => showChaosEvent(fire, 3000), 900);
+        roundTimeout(() => showChaosEvent(fire, 3000), 900);
       }
 
       statusEl.className   = `status-text ${w}-msg`;
@@ -2158,7 +2171,7 @@ function handleClick(i, fromAI = false) {
       boardWrapEl.classList.add(`win-flash-${w}`);
       boardWrapEl.addEventListener('animationend', () => boardWrapEl.classList.remove(`win-flash-${w}`), { once: true });
       const _lineName = getWinLineName(result.cells);
-      if (_lineName) setTimeout(() => showChaosEvent(_lineName + '!', 2000), 750);
+      if (_lineName) roundTimeout(() => showChaosEvent(_lineName + '!', 2000), 750);
       updateAllTimeStats(w);
       updateMatchPips();
       updateStreakBadges();
@@ -2167,10 +2180,10 @@ function handleClick(i, fromAI = false) {
       document.getElementById('btn-replay').style.display = '';
       document.getElementById('btn-hint').disabled = true;
       document.getElementById('btn-analysis').style.display = '';
-      afterGameOver(showGameSummary, 900);
+      roundTimeout(showGameSummary, 900);
       maybeShowTip();
       if (matchTarget && gameState.scores[w] >= Math.ceil(matchTarget / 2)) {
-        afterGameOver(() => showMatchVictory(w), 1200);
+        roundTimeout(() => showMatchVictory(w), 1200);
       }
     }
     updateUndoBtn();
@@ -2179,7 +2192,7 @@ function handleClick(i, fromAI = false) {
     const matchOver = result.winner !== 'draw' && matchTarget &&
       gameState.scores[result.winner] >= Math.ceil(matchTarget / 2);
     if (spectatorMode && !matchOver) {
-      afterGameOver(() => { if (spectatorMode) newRound(); }, spectatorDelay);
+      roundTimeout(() => { if (spectatorMode) newRound(); }, spectatorDelay);
     }
   } else {
     // ── Turn switching ────────────────────────────────────────────────
@@ -2243,7 +2256,7 @@ function handleClick(i, fromAI = false) {
     if (_isHumanMove) {
       const _fc = lastPlacedCell;
       const _q  = _details.quality;
-      setTimeout(() => showMoveBadge(_fc, _q), 80);
+      roundTimeout(() => showMoveBadge(_fc, _q), 80);
     }
 
     // ── CHAOS: Phantom Veil — pieces invisible for 1.5 s ─────────────
@@ -2259,7 +2272,7 @@ function handleClick(i, fromAI = false) {
     if (quipText) {
       statusEl.className   = `status-text ${currentPlayer}-msg`;
       statusEl.textContent = `💬 ${quipText}`;
-      setTimeout(() => {
+      roundTimeout(() => {
         if (!gameState.gameOver) {
           statusEl.className   = `status-text ${gameState.currentPlayer}-msg`;
           statusEl.textContent = nextLabel;
@@ -2274,7 +2287,7 @@ function handleClick(i, fromAI = false) {
     if (aiMode && currentPlayer === HINDU && !spectatorMode && !quipText && Math.random() < 0.20) {
       const taunts = AI_TAUNTS[currentThemeKey] || AI_TAUNTS['egypt-hindu'];
       if (taunts && taunts.length) {
-        setTimeout(() => { if (!gameState.gameOver) showChaosEvent(`🤖 ${taunts[randInt(taunts.length)]}`, 2400); }, 600);
+        roundTimeout(() => { if (!gameState.gameOver) showChaosEvent(`🤖 ${taunts[randInt(taunts.length)]}`, 2400); }, 600);
       }
     }
 
@@ -2285,7 +2298,7 @@ function handleClick(i, fromAI = false) {
     // Warn human player when they're in a forced-loss position (only meaningful after move 4)
     if (aiMode && !spectatorMode && gameState.currentPlayer === EGYPT && !gameState.gameOver && moveLog.length >= 4) {
       const _score = minimax([...gameState.board], false, -Infinity, Infinity);
-      if (_score === 10) setTimeout(() => { if (!gameState.gameOver) showChaosEvent('⚠ Forced loss — find your best move!', 2600); }, 500);
+      if (_score === 10) roundTimeout(() => { if (!gameState.gameOver) showChaosEvent('⚠ Forced loss — find your best move!', 2600); }, 500);
     }
     scheduleAI();
     scheduleSpectatorAI();
@@ -2303,7 +2316,7 @@ function handleClick(i, fromAI = false) {
 ───────────────────────────────────────────── */
 function newRound() {
   cancelAI();   // a move pending from the previous round must not land on this board
-  cancelGameOverTimers();
+  cancelRoundTimers();
   stopReplay();
   clearGameSave();
   hideWinSeal();

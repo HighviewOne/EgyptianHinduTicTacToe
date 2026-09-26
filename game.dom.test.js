@@ -303,3 +303,28 @@ test('Demo games and AI moves do not count in all-time stats', () => {
   expect(stats().gamesPlayed).toBeUndefined();
   expect(stats().cellFreq.reduce((a, b) => a + b, 0)).toBe(1);
 });
+
+// ─── Round-scoped timers ──────────────────────────────────────────────────────
+
+test('A quip from the previous round does not overwrite the new round status', () => {
+  page = bootPage();
+  page.clock.tick(INTRO_MS);
+  page.setRandom(0.1);                     // < 0.15 → a quip replaces the status for 1.7 s
+  page.clickCell(0);
+  expect(page.$('status').textContent).toMatch(/^💬/);
+  page.key('KeyN');                        // Egypt starts again (0 games finished)
+  page.clock.tick(2000);
+  expect(page.$('status').textContent).toMatch(/^Egypt's turn/);
+});
+
+test('A newer toast is not hidden early by an older toast timer', () => {
+  page = bootPage();
+  page.clock.tick(INTRO_MS);
+  const toast = page.$('chaos-event');
+  page.w.eval("showChaosEvent('first', 2600)");
+  page.clock.tick(2000);
+  page.w.eval("showChaosEvent('second', 2600)");
+  page.clock.tick(1000);                   // first toast's timer has expired by now
+  expect(toast.textContent).toBe('second');
+  expect(toast.classList.contains('visible')).toBe(true);
+});
