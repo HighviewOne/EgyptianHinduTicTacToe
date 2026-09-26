@@ -135,6 +135,7 @@ function applyRestore() {
   try {
     const g = JSON.parse(localStorage.getItem(GAME_SAVE_KEY) || 'null');
     if (!g) return;
+    cancelAI();
     gameState.board         = g.board;
     gameState.currentPlayer = g.currentPlayer || EGYPT;
     gameState.scores        = g.scores || { egypt: 0, hindu: 0, draws: 0 };
@@ -156,6 +157,9 @@ function applyRestore() {
     statusEl.className   = `status-text ${gameState.currentPlayer}-msg`;
     statusEl.textContent = LABELS[gameState.currentPlayer];
     showChaosEvent('♻ Game restored!', 2200);
+    // Saved mid-think (India to move vs AI)? Resume the AI; otherwise the human's timer.
+    scheduleAI();
+    if (!spectatorMode && (!aiMode || gameState.currentPlayer === EGYPT)) startTimer();
   } catch(_) {}
 }
 
@@ -533,7 +537,8 @@ function showIntro() {
     if (introTimer) { clearTimeout(introTimer); introTimer = null; }
     introShowing = false;
     scheduleAI();
-    if (!aiMode || gameState.currentPlayer === EGYPT) startTimer();
+    scheduleSpectatorAI();
+    if (!spectatorMode && (!aiMode || gameState.currentPlayer === EGYPT)) startTimer();
   };
   introTimer = setTimeout(dismiss, 4000);
   overlay.addEventListener('click', dismiss);
@@ -857,7 +862,7 @@ function showHint() {
   clearTimeout(hintTimer);
   boardEl.querySelectorAll('.cell').forEach(c => c.classList.remove('hint-cell'));
   hintUsedThisGame = true;
-  const best = getHintMove([...gameState.board], gameState.currentPlayer);
+  const best = getHintMove(rulesBoard(), gameState.currentPlayer);
   if (best < 0) return;
   const cell = boardEl.querySelectorAll('.cell')[best];
   if (cell && !cell.classList.contains('taken')) {
@@ -880,7 +885,7 @@ function showHint() {
 ───────────────────────────────────────────── */
 function scheduleSpectatorAI() {
   if (!spectatorMode || gameState.currentPlayer !== EGYPT || gameState.gameOver ||
-      aiThinking || introShowing || chaosShowing) return;
+      aiThinking || introShowing || chaosShowing || chaosState.lagActive) return;
   aiThinking = true;
   boardEl.classList.add('ai-thinking');
   const p = currentTheme.players.egypt;
@@ -888,8 +893,9 @@ function scheduleSpectatorAI() {
   statusEl.innerHTML = `${p.name} ponders<span class="thinking-dots"><span>.</span><span>.</span><span>.</span></span>`;
   const _speedScale = spectatorDelay / 2800;
   const delay = (480 + Math.random() * 520) * _speedScale;
-  const snapBoard = [...gameState.board];
-  setTimeout(() => {
+  const snapBoard = rulesBoard();
+  aiTimer = setTimeout(() => {
+    aiTimer = null;
     if (!spectatorMode || gameState.currentPlayer !== EGYPT || gameState.gameOver) {
       aiThinking = false;
       boardEl.classList.remove('ai-thinking');
@@ -1122,6 +1128,13 @@ function replayGame() {
 ───────────────────────────────────────────── */
 function randInt(n)    { return Math.floor(Math.random() * n); }
 function chaosHas(id)  { return activeChaosRules.some(r => r.id === id); }
+// Board as the rules see it: the Holy Ground cell (if active) is unplayable.
+// Use this for AI/hint/timer move choice and for the win/draw check.
+function rulesBoard() {
+  return chaosMode && chaosHas('holy-ground')
+    ? blockCell(gameState.board, chaosState.holyCell)
+    : [...gameState.board];
+}
 
 function pickChaosRules() {
   const eligible = CHAOS_RULES.filter(r => chaosEnabled.has(r.id));
@@ -1234,7 +1247,7 @@ function markChaosUsed(id) {
 function onTimerExpire() {
   if (gameState.gameOver || aiThinking) return;
   if (aiMode && gameState.currentPlayer === HINDU) return; // AI handles itself
-  const empty = gameState.board.reduce((a, v, i) => v === null ? [...a, i] : a, []);
+  const empty = rulesBoard().reduce((a, v, i) => v === null ? [...a, i] : a, []);
   if (empty.length) handleClick(empty[randInt(empty.length)]);
 }
 
@@ -1440,7 +1453,8 @@ function showChaosOverlay() {
     clearTimeout(dismissTimer);
     chaosShowing = false;
     scheduleAI();
-    if (!aiMode || gameState.currentPlayer === EGYPT) startTimer();
+    scheduleSpectatorAI();
+    if (!spectatorMode && (!aiMode || gameState.currentPlayer === EGYPT)) startTimer();
   };
   const dismissTimer = setTimeout(dismiss, 4600);
   overlay.addEventListener('click', dismiss);
@@ -1888,7 +1902,12 @@ function handleClick(i, fromAI = false) {
     sfxChaos('divine-lag');
     chaosLog.push({ icon: '⏳', name: 'Divine Lag' });
     showChaosEvent('⏳ DIVINE LAG! The celestial servers are buffering... please hold...', 3300);
-    setTimeout(() => { chaosState.lagActive = false; }, 3000);
+    // When the lag ends, resume whichever AI was waiting (it can't start during lag).
+    const lagState = chaosState;
+    setTimeout(() => {
+      lagState.lagActive = false;
+      if (lagState === chaosState) { scheduleAI(); scheduleSpectatorAI(); }
+    }, 3000);
   }
 
   // ── CHAOS: Treachery (25 % once — placed piece switches allegiance) ─
@@ -1983,7 +2002,7 @@ function handleClick(i, fromAI = false) {
   }
 
   // ── Check winner (after all chaos mutations) ──────────────────────
-  const result = checkWinner(board);
+  const result = checkWinner(rulesBoard());  // Holy Ground cell counts as filled for the draw check
 
   if (result) {
     // ── Game over ─────────────────────────────────────────────────────
@@ -2211,6 +2230,7 @@ function handleClick(i, fromAI = false) {
    session tally carries over across rounds.
 ───────────────────────────────────────────── */
 function newRound() {
+  cancelAI();   // a move pending from the previous round must not land on this board
   clearGameSave();
   hideWinSeal();
   resetBoard();
@@ -2699,11 +2719,16 @@ window.addEventListener('appinstalled', () => {
    Init — restore saved prefs or default startup
 ───────────────────────────────────────────── */
 initEditableNames();
+// loadPrefs → applyTheme → resetScores → newRound clears the mid-game save,
+// so hold on to it across startup and put it back before offering a restore.
+let _pendingSave = null;
+try { _pendingSave = localStorage.getItem(GAME_SAVE_KEY); } catch (_) {}
 if (!loadPrefs()) {
   setAura(EGYPT);
   renderBoard();
   showIntro();
 }
+try { if (_pendingSave) localStorage.setItem(GAME_SAVE_KEY, _pendingSave); } catch (_) {}
 updateRankBadges();
 tryRestoreGame();
 

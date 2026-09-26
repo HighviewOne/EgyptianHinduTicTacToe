@@ -3,6 +3,7 @@
 const {
   EGYPT, HINDU, WIN_LINES,
   checkWinner, getNextPlayer, getStartingPlayer, createInitialBoard,
+  BLOCKED, blockCell,
 } = require('./gameLogic');
 
 // ─── createInitialBoard ───────────────────────────────────────────────────────
@@ -106,5 +107,57 @@ describe('getStartingPlayer', () => {
   test('draws count toward the total', () => {
     expect(getStartingPlayer({ egypt: 0, hindu: 0, draws: 2 })).toBe(EGYPT);
     expect(getStartingPlayer({ egypt: 0, hindu: 0, draws: 3 })).toBe(HINDU);
+  });
+});
+
+// ─── blockCell (Holy Ground) ──────────────────────────────────────────────────
+
+describe('blockCell', () => {
+  test('fills an empty cell with BLOCKED without mutating the input', () => {
+    const board = createInitialBoard();
+    const out = blockCell(board, 4);
+    expect(out[4]).toBe(BLOCKED);
+    expect(board[4]).toBeNull();
+  });
+
+  test('leaves an occupied cell alone', () => {
+    const board = createInitialBoard();
+    board[4] = EGYPT;
+    expect(blockCell(board, 4)[4]).toBe(EGYPT);
+  });
+
+  test('index -1 (rule inactive) returns an unchanged copy', () => {
+    const board = createInitialBoard();
+    const out = blockCell(board, -1);
+    expect(out).toEqual(board);
+    expect(out).not.toBe(board);
+  });
+
+  test('only the blocked cell left empty counts as a draw', () => {
+    // E H E / E H H / H E _  — cell 8 is holy, no line complete
+    const board = [EGYPT, HINDU, EGYPT, EGYPT, HINDU, HINDU, HINDU, EGYPT, null];
+    expect(checkWinner(board)).toBeNull();
+    expect(checkWinner(blockCell(board, 8))).toEqual({ winner: 'draw', cells: [] });
+  });
+});
+
+// ─── AI never picks a blocked cell ────────────────────────────────────────────
+
+describe('getBestMove with a blocked cell', () => {
+  Object.assign(global, { EGYPT, HINDU, WIN_LINES, randInt: n => Math.floor(Math.random() * n) });
+  const { getBestMove, setAiMode } = require('./ai');
+
+  test.each(['easy', 'medium', 'hard'])('%s AI avoids the Holy Ground cell', mode => {
+    setAiMode(mode);
+    for (let holy = 0; holy < 9; holy++) {
+      for (let first = 0; first < 9; first++) {
+        if (first === holy) continue;
+        const board = createInitialBoard();
+        board[first] = EGYPT;
+        for (let k = 0; k < 5; k++) {
+          expect(getBestMove(blockCell(board, holy))).not.toBe(holy);
+        }
+      }
+    }
   });
 });

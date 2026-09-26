@@ -1,10 +1,11 @@
 /* ─────────────────────────────────────────────
    ai.js — Minimax AI with alpha-beta pruning
    Exposes: aiMode, aiThinking, getBestMove,
-            scheduleAI, setMode
+            scheduleAI, cancelAI, setMode
 ───────────────────────────────────────────── */
 let aiMode     = null;   // null | 'easy' | 'medium' | 'hard'
 let aiThinking = false;
+let aiTimer    = null;   // pending AI move timeout (India AI or demo-mode Egypt)
 
 function boardWinner(b) {
   for (const [a, x, c] of WIN_LINES) {
@@ -72,8 +73,18 @@ function getBestMove(b) {
   return scored[0].i;
 }
 
+// Cancels a pending AI move (e.g. the round was restarted mid-think) so a
+// stale move can never land on the next board.
+function cancelAI() {
+  clearTimeout(aiTimer);
+  aiTimer    = null;
+  aiThinking = false;
+  boardEl.classList.remove('ai-thinking');
+}
+
 function scheduleAI() {
-  if (!aiMode || gameState.currentPlayer !== HINDU || gameState.gameOver || introShowing || chaosShowing) return;
+  if (!aiMode || gameState.currentPlayer !== HINDU || gameState.gameOver || aiThinking ||
+      introShowing || chaosShowing || chaosState.lagActive) return;
   aiThinking = true;
   boardEl.classList.add('ai-thinking');
   const p = currentTheme.players.hindu;
@@ -81,11 +92,11 @@ function scheduleAI() {
   statusEl.innerHTML = `${p.name} ponders<span class="thinking-dots"><span>.</span><span>.</span><span>.</span></span>`;
   const delay = aiMode === 'easy' ? 400 + Math.random() * 400
                                   : 500 + Math.random() * 300;
-  setTimeout(() => {
-    if (!aiThinking) return;
+  aiTimer = setTimeout(() => {
+    aiTimer    = null;
     aiThinking = false;
     boardEl.classList.remove('ai-thinking');
-    handleClick(getBestMove([...gameState.board]), true);
+    handleClick(getBestMove(rulesBoard()), true);
   }, delay);
 }
 
@@ -96,8 +107,12 @@ function setMode(mode) {
   document.querySelector('#card-hindu .player-title').textContent =
     mode ? (mode === 'hard' ? 'Ancient AI' : mode === 'medium' ? 'Medium AI' : 'Easy AI')
          : currentTheme.players.hindu.title;
-  aiThinking = false;
-  boardEl.classList.remove('ai-thinking');
+  cancelAI();
   resetScores();
   savePrefs();
+}
+
+// CommonJS export for Jest (browser loads this as a plain <script>).
+if (typeof module !== 'undefined') {
+  module.exports = { getBestMove, minimax, boardWinner, setAiMode: m => { aiMode = m; } };
 }

@@ -50,9 +50,21 @@ function createInitialBoard() {
   return Array(9).fill(null);
 }
 
+// ─── blockCell ───────────────────────────────────────────────────────────────
+// Returns a copy of the board with cell `idx` filled by a neutral BLOCKED
+// marker (if it is empty). Used for the Holy Ground chaos rule: the AI, hints
+// and the draw check all treat the forbidden cell as unplayable. A single
+// BLOCKED cell can never complete a line, so checkWinner stays correct.
+const BLOCKED = 'blocked';
+function blockCell(board, idx) {
+  const b = [...board];
+  if (idx >= 0 && idx < b.length && b[idx] === null) b[idx] = BLOCKED;
+  return b;
+}
+
 // ─── Export ──────────────────────────────────────────────────────────────────
 // CommonJS export for Jest; when loaded via <script> in the browser the
 // symbols are already on the global scope, so no extra work is needed.
 if (typeof module !== 'undefined') {
-  module.exports = { EGYPT, HINDU, WIN_LINES, checkWinner, getNextPlayer, getStartingPlayer, createInitialBoard };
+  module.exports = { EGYPT, HINDU, BLOCKED, WIN_LINES, checkWinner, getNextPlayer, getStartingPlayer, createInitialBoard, blockCell };
 }
