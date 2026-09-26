@@ -284,3 +284,22 @@ test('Custom player names are used in the turn label after reload', () => {
   page.clock.tick(INTRO_MS);
   expect(page.$('status').textContent).toMatch(/^Cleo's turn/);
 });
+
+test('Demo games and AI moves do not count in all-time stats', () => {
+  page = bootPage();
+  page.clock.tick(INTRO_MS);
+  page.setRandom(0.9);
+  const stats = () => JSON.parse(page.w.localStorage.getItem('ehttt-stats') || '{}');
+
+  page.$('mode-hard').click();
+  page.clickCell(0);
+  page.clock.tick(1000);                   // AI replies
+  expect(page.pieces('hindu')).toBe(1);
+  expect(stats().cellFreq.reduce((a, b) => a + b, 0)).toBe(1);
+
+  page.$('btn-spectator').click();
+  page.clock.tick(30000);                  // several AI-vs-AI games
+  expect(page.w.eval('gameState.scores.draws')).toBeGreaterThan(0);
+  expect(stats().gamesPlayed).toBeUndefined();
+  expect(stats().cellFreq.reduce((a, b) => a + b, 0)).toBe(1);
+});

@@ -227,6 +227,7 @@ function updateRankBadges() {
 }
 
 function updateAllTimeStats(outcome) {
+  if (spectatorMode) return;   // AI-vs-AI demo games don't count
   const s = loadAllTimeStats();
   const oldR1 = getRank(s.egypt || 0).label;
   const oldR2 = getRank(s.hindu || 0).label;
@@ -1889,8 +1890,8 @@ function handleClick(i, fromAI = false) {
   board[i] = currentPlayer;
   let actualI = i;
   lastPlacedCell = i;
-  // Track cell frequency for heatmap
-  { const st = loadAllTimeStats(); if (!st.cellFreq) st.cellFreq = Array(9).fill(0); st.cellFreq[i]++; saveAllTimeStats(st); }
+  // Track cell frequency for heatmap (human moves only)
+  if (_isHumanMove && !spectatorMode) { const st = loadAllTimeStats(); if (!st.cellFreq) st.cellFreq = Array(9).fill(0); st.cellFreq[i]++; saveAllTimeStats(st); }
 
   // ── CHAOS: Wild Turn (30 % chance once, after ≥ 2 pieces on board) ─
   if (chaosMode && chaosHas('wild-turn') && !chaosState.wildUsed && board.filter(v => v).length >= 2) {
