@@ -167,3 +167,97 @@ test('New round while the AI is thinking: the pending AI move is discarded', () 
   page.clickCell(4);                       // human can play normally
   expect(page.t.state.board[4]).toBe('egypt');
 });
+
+// ─── Undo, overlays, shortcuts, replay ────────────────────────────────────────
+
+// Two-player game where Egypt wins the top row: E0 H3 E1 H4 E2
+function playEgyptTopRowWin(p) {
+  [0, 3, 1, 4, 2].forEach(i => p.clickCell(i));
+  expect(p.t.state.gameOver).toBe(true);
+}
+
+test('Undo after a win takes back the score and all-time stats', () => {
+  page = bootPage();
+  page.clock.tick(INTRO_MS);
+  page.setRandom(0.9);
+  playEgyptTopRowWin(page);
+  const stats = () => JSON.parse(page.w.localStorage.getItem('ehttt-stats') || '{}');
+  expect(page.t.state.scores.egypt).toBe(1);
+  const winsAfter = stats().egypt;
+
+  page.key('KeyU');
+  page.clock.tick(2000);
+
+  expect(page.t.state.gameOver).toBe(false);
+  expect(page.t.state.scores.egypt).toBe(0);
+  expect(page.$('score-egypt').textContent).toBe('0');
+  expect(stats().egypt || 0).toBe(winsAfter - 1);
+  expect(page.t.state.board[2]).toBeNull();
+  expect(page.$('win-seal').classList.contains('visible')).toBe(false);
+
+  page.clickCell(2);                       // winning again counts once, not twice
+  expect(page.t.state.scores.egypt).toBe(1);
+});
+
+test('Undo removes the undone moves from the move log', () => {
+  page = bootPage();
+  page.clock.tick(INTRO_MS);
+  page.clickCell(0);
+  page.clickCell(4);
+  page.key('KeyU');
+  expect(page.w.eval('moveLog.length')).toBe(1);
+});
+
+test('Starting a new round right after a win does not pop the win seal over it', () => {
+  page = bootPage();
+  page.clock.tick(INTRO_MS);
+  page.setRandom(0.9);
+  playEgyptTopRowWin(page);
+  page.clock.tick(100);
+  page.key('KeyN');
+  page.clock.tick(3000);
+
+  expect(page.$('win-seal').classList.contains('visible')).toBe(false);
+  expect(page.t.state.gameOver).toBe(false);
+});
+
+test('Escape closes the win seal', () => {
+  page = bootPage();
+  page.clock.tick(INTRO_MS);
+  playEgyptTopRowWin(page);
+  page.clock.tick(1500);
+  expect(page.$('win-seal').classList.contains('visible')).toBe(true);
+  page.key('Escape');
+  expect(page.$('win-seal').classList.contains('visible')).toBe(false);
+});
+
+test('Typing in a player-name field does not trigger shortcuts', () => {
+  page = bootPage();
+  page.clock.tick(INTRO_MS);
+  const name = page.$('name-egypt');
+  name.focus();
+  for (const code of ['KeyS', 'KeyN', 'Digit5', 'KeyM']) {
+    name.dispatchEvent(new page.w.KeyboardEvent('keydown', { code, bubbles: true }));
+  }
+  expect(page.t.state.board.every(v => v === null)).toBe(true);
+  expect(page.$('btn-spectator').classList.contains('on')).toBe(false);
+});
+
+test('New round during a replay stops the replay', () => {
+  page = bootPage();
+  page.clock.tick(INTRO_MS);
+  page.setRandom(0.9);
+  playEgyptTopRowWin(page);
+  page.key('Escape');
+  page.key('KeyR');
+  page.clock.tick(400);
+  page.key('KeyN');
+  page.clock.tick(600);                    // a still-running replay would redraw the board here
+
+  const starter = page.t.state.currentPlayer;   // India opens round 2
+  page.clickCell(4);
+  expect(page.t.state.board[4]).toBe(starter);
+  page.clock.tick(5000);
+  expect(page.$('status').textContent).not.toMatch(/Replay/);
+  expect(page.$('board').querySelectorAll('.win-cell').length).toBe(0);
+});

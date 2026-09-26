@@ -80,6 +80,12 @@ let matchTarget = 0;   // 0 = free play, 3/5/7 = best-of-N
 ───────────────────────────────────────────── */
 let gameLog   = [];   // Array of board snapshots after each move
 let replaying = false;
+let replayTimer = null;
+// Timers queued when a game ends (win seal, summary, match victory, demo
+// auto-restart). Cancelled by newRound()/undo() so they can't fire late.
+let _gameOverTimers = [];
+function afterGameOver(fn, ms) { _gameOverTimers.push(setTimeout(fn, ms)); }
+function cancelGameOverTimers() { _gameOverTimers.forEach(clearTimeout); _gameOverTimers = []; }
 let hintUsedThisGame  = false;   // true once showHint() fires this round
 let trailedInMatch    = false;   // true once opponent had 2+ wins while player had 0
 let spectatorMode  = false;       // AI vs AI demo mode
@@ -672,23 +678,30 @@ function setAura(player, win = false) {
 /* ─────────────────────────────────────────────
    SVG grid lines (injected after board renders)
 ───────────────────────────────────────────── */
+// A cell's box in the board's own (untransformed) coordinate space.
+// .board is position:relative, so it is every cell's offsetParent.
+function cellBox(el) {
+  const left = el.offsetLeft, top = el.offsetTop, width = el.offsetWidth, height = el.offsetHeight;
+  return { left, top, width, height, right: left + width, bottom: top + height };
+}
+
 function injectGridLines() {
   const existing = boardEl.querySelector('.grid-lines-svg');
   if (existing) existing.remove();
   const cells = boardEl.querySelectorAll('.cell');
   if (!cells.length) return;
-  const bRect = boardEl.getBoundingClientRect();
-  const W = bRect.width || 300, H = bRect.height || 300;
+  // Layout (offset*) coordinates, not getBoundingClientRect: the board may be
+  // rotated (cosmic) or mirrored, and the SVG inherits that transform itself.
+  const W = boardEl.clientWidth || 300, H = boardEl.clientHeight || 300;
   if (W < 10) return;
-  const r0 = cells[0].getBoundingClientRect();
-  const r1 = cells[1].getBoundingClientRect();
-  const r3 = cells[3].getBoundingClientRect();
-  const r6 = cells[6] ? cells[6].getBoundingClientRect() : null;
+  const r0 = cellBox(cells[0]), r1 = cellBox(cells[1]), r2 = cellBox(cells[2]);
+  const r3 = cellBox(cells[3]);
+  const r6 = cells[6] ? cellBox(cells[6]) : null;
   if (!r0.width) return;
-  const vx1 = (r0.right + r1.left) / 2 - bRect.left;
-  const vx2 = (r1.right + cells[2].getBoundingClientRect().left) / 2 - bRect.left;
-  const hy1 = (r0.bottom + r3.top) / 2 - bRect.top;
-  const hy2 = r6 ? (cells[3].getBoundingClientRect().bottom + r6.top) / 2 - bRect.top : hy1 * 2;
+  const vx1 = (r0.right + r1.left) / 2;
+  const vx2 = (r1.right + r2.left) / 2;
+  const hy1 = (r0.bottom + r3.top) / 2;
+  const hy2 = r6 ? (r3.bottom + r6.top) / 2 : hy1 * 2;
   const ov = 14;
   const ink = getComputedStyle(document.documentElement).getPropertyValue('--ink').trim() || '#2a1a08';
   const j = s => (Math.sin(s * 12.9898 + 43758.5453) % 1) * 2 - 1;
@@ -706,17 +719,17 @@ function drawWinLine(cells, winner) {
   const old = boardEl.querySelector('.win-line-svg');
   if (old) old.remove();
 
-  const bRect = boardEl.getBoundingClientRect();
-  const W = bRect.width || 300, H = bRect.height || 300;
+  const W = boardEl.clientWidth || 300, H = boardEl.clientHeight || 300;
   const cellEls = boardEl.querySelectorAll('.cell');
   if (!cellEls[cells[0]] || !cellEls[cells[cells.length-1]]) return;
 
-  const r1 = cellEls[cells[0]].getBoundingClientRect();
-  const r2 = cellEls[cells[cells.length-1]].getBoundingClientRect();
-  const x1 = r1.left + r1.width/2 - bRect.left;
-  const y1 = r1.top + r1.height/2 - bRect.top;
-  const x2 = r2.left + r2.width/2 - bRect.left;
-  const y2 = r2.top + r2.height/2 - bRect.top;
+  // Untransformed coordinates — see injectGridLines()
+  const r1 = cellBox(cellEls[cells[0]]);
+  const r2 = cellBox(cellEls[cells[cells.length-1]]);
+  const x1 = r1.left + r1.width/2;
+  const y1 = r1.top + r1.height/2;
+  const x2 = r2.left + r2.width/2;
+  const y2 = r2.top + r2.height/2;
   const dx = x2-x1, dy = y2-y1, len = Math.sqrt(dx*dx+dy*dy) || 1;
   const ov = Math.min(20, len * 0.1);
   const px = -dy/len*4, py = dx/len*4;
@@ -728,7 +741,7 @@ function drawWinLine(cells, winner) {
   boardEl.insertAdjacentHTML('beforeend', svg);
 
   // Show win seal after win line draws
-  setTimeout(() => showWinSeal(winner), 900);
+  afterGameOver(() => showWinSeal(winner), 900);
 }
 
 
@@ -1065,6 +1078,14 @@ function vibrate(pattern) {
 /* ─────────────────────────────────────────────
    Replay — animate the last game's board states
 ───────────────────────────────────────────── */
+function stopReplay() {
+  clearTimeout(replayTimer);
+  replayTimer = null;
+  replaying   = false;
+  const btn = document.getElementById('btn-replay');
+  if (btn) btn.disabled = false;
+}
+
 function replayGame() {
   if (!gameLog.length || replaying) return;
   replaying = true;
@@ -1078,6 +1099,7 @@ function replayGame() {
   const doStep = () => {
     if (step >= snapshots.length) {
       // Restore actual final state
+      replayTimer = null;
       renderBoard(gameState.lastWinCells || []);
       statusEl.className   = `status-text ${gameState.lastWinner || EGYPT}-msg`;
       statusEl.textContent = `↺ Replay complete`;
@@ -1118,7 +1140,7 @@ function replayGame() {
       boardEl.appendChild(cell);
     });
     step++;
-    setTimeout(doStep, step === 1 ? 300 : 520);
+    replayTimer = setTimeout(doStep, step === 1 ? 300 : 520);
   };
   doStep();
 }
@@ -1372,6 +1394,15 @@ function saveSnapshot() {
     cosmicAngle,
     boardFilter:   boardEl.style.filter,
     chaosState:    { ...chaosState },
+    // Undo may follow a win/draw, so keep everything the result changes.
+    scores:        { ...gameState.scores },
+    streaks:       { ...gameState.streaks },
+    lastWinner:    gameState.lastWinner,
+    trailedInMatch,
+    allTimeStats:  JSON.stringify(loadAllTimeStats()),
+    moveLogLen:    moveLog.length,
+    gameLogLen:    gameLog.length,
+    chaosLogLen:   chaosLog.length,
   });
   if (gameState.history.length > 12) gameState.history.shift();
   updateUndoBtn();
@@ -1380,10 +1411,41 @@ function saveSnapshot() {
 function undo() {
   if (!gameState.history.length || aiThinking) return;
   const snap = gameState.history.pop();
+  const wasOver = gameState.gameOver;
 
   gameState.board         = snap.board;
   gameState.currentPlayer = snap.currentPlayer;
   gameState.gameOver      = false;
+  gameState.lastWinCells  = [];
+
+  // Take back the undone moves from the logs (move list, replay, summary)
+  moveLog.length  = snap.moveLogLen;
+  gameLog.length  = snap.gameLogLen;
+  chaosLog.length = snap.chaosLogLen;
+  updateMoveLog();
+
+  // Undoing a finished game also takes back its result (achievements stay)
+  if (wasOver) {
+    cancelGameOverTimers();
+    stopReplay();
+    hideWinSeal();
+    document.getElementById('match-victory').classList.remove('visible');
+    gameState.scores     = { ...snap.scores };
+    gameState.streaks    = { ...snap.streaks };
+    gameState.lastWinner = snap.lastWinner;
+    trailedInMatch       = snap.trailedInMatch;
+    saveAllTimeStats(JSON.parse(snap.allTimeStats));
+    scoreEgypt.textContent = gameState.scores.egypt;
+    scoreHindu.textContent = gameState.scores.hindu;
+    drawsEl.textContent    = gameState.scores.draws;
+    updateMatchPips();
+    updateStreakBadges();
+    updateSessionRate();
+    updateRankBadges();
+    document.getElementById('btn-replay').style.display   = 'none';
+    document.getElementById('btn-analysis').style.display = 'none';
+    document.getElementById('btn-hint').disabled = false;
+  }
 
   cosmicAngle  = snap.cosmicAngle;
   chaosState   = { ...snap.chaosState };
@@ -2026,7 +2088,7 @@ function handleClick(i, fromAI = false) {
       cardEgypt.classList.remove('active-turn', 'winner-glow');
       cardHindu.classList.remove('active-turn', 'winner-glow');
       setAura(null);
-      setTimeout(() => showWinSeal('draw'), 600);
+      afterGameOver(() => showWinSeal('draw'), 600);
       updateAllTimeStats('draw');
       updateMatchPips();
       updateStreakBadges();
@@ -2035,7 +2097,7 @@ function handleClick(i, fromAI = false) {
       document.getElementById('btn-replay').style.display = '';
       document.getElementById('btn-hint').disabled = true;
       document.getElementById('btn-analysis').style.display = '';
-      setTimeout(showGameSummary, 900);
+      afterGameOver(showGameSummary, 900);
       maybeShowTip();
     } else {
       const w = result.winner;
@@ -2095,10 +2157,10 @@ function handleClick(i, fromAI = false) {
       document.getElementById('btn-replay').style.display = '';
       document.getElementById('btn-hint').disabled = true;
       document.getElementById('btn-analysis').style.display = '';
-      setTimeout(showGameSummary, 900);
+      afterGameOver(showGameSummary, 900);
       maybeShowTip();
       if (matchTarget && gameState.scores[w] >= Math.ceil(matchTarget / 2)) {
-        setTimeout(() => showMatchVictory(w), 1200);
+        afterGameOver(() => showMatchVictory(w), 1200);
       }
     }
     updateUndoBtn();
@@ -2107,7 +2169,7 @@ function handleClick(i, fromAI = false) {
     const matchOver = result.winner !== 'draw' && matchTarget &&
       gameState.scores[result.winner] >= Math.ceil(matchTarget / 2);
     if (spectatorMode && !matchOver) {
-      setTimeout(() => { if (spectatorMode) newRound(); }, spectatorDelay);
+      afterGameOver(() => { if (spectatorMode) newRound(); }, spectatorDelay);
     }
   } else {
     // ── Turn switching ────────────────────────────────────────────────
@@ -2231,6 +2293,8 @@ function handleClick(i, fromAI = false) {
 ───────────────────────────────────────────── */
 function newRound() {
   cancelAI();   // a move pending from the previous round must not land on this board
+  cancelGameOverTimers();
+  stopReplay();
   clearGameSave();
   hideWinSeal();
   resetBoard();
@@ -2241,7 +2305,7 @@ function newRound() {
   moveLog  = [];
   chaosLog = [];
   updateMoveLog();
-  replaying = false;
+  gameState.lastWinCells = [];
   hintUsedThisGame = false;
   boardEl.classList.remove('game-over');
   updateStreakBadges();
@@ -2412,8 +2476,13 @@ boardEl.addEventListener('keydown', e => {
 });
 
 document.addEventListener('keydown', e => {
+  // Typing in a name field / input must not trigger game shortcuts
+  const tgt = e.target;
+  if (tgt && tgt.closest &&
+      tgt.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])')) return;
   // Escape closes any open modal / overlay
   if (e.code === 'Escape') {
+    hideWinSeal();
     document.getElementById('stats-modal').classList.remove('visible');
     document.getElementById('match-victory').classList.remove('visible');
     document.getElementById('shortcut-help').classList.remove('visible');
