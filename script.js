@@ -389,6 +389,10 @@ function unlockAchievement(ach) {
 }
 
 function checkAchievements(winner) {
+  // Achievements belong to the human: none in AI-vs-AI demo, and no win
+  // achievements when the AI (India) is the winner.
+  if (spectatorMode) return;
+  if (aiMode && winner === HINDU) return;
   const a = loadAchievements();
   const tryUnlock = id => {
     if (!a[id]) unlockAchievement(ACHIEVEMENTS.find(x => x.id === id));
@@ -455,6 +459,15 @@ function updateStreakBadges() {
 /* ─────────────────────────────────────────────
    Editable player names
 ───────────────────────────────────────────── */
+// Turn label uses the player's (possibly custom) name.
+function setPlayerLabel(player, name) {
+  LABELS[player] = `${name}'s turn — ${currentTheme.players[player].label.split('—')[1]?.trim() || ''}`;
+  // Refresh status bar if it's currently this player's turn
+  if (!gameState.gameOver && gameState.currentPlayer === player) {
+    statusEl.textContent = LABELS[player];
+  }
+}
+
 function initEditableNames() {
   [{ id: 'name-egypt', player: EGYPT }, { id: 'name-hindu', player: HINDU }].forEach(({ id, player }) => {
     const el = document.getElementById(id);
@@ -467,11 +480,7 @@ function initEditableNames() {
       const raw  = el.textContent.replace(/\n/g, '').trim().slice(0, 20);
       const name = raw || currentTheme.players[player].name;
       el.textContent = name;
-      LABELS[player] = `${name}'s turn — ${currentTheme.players[player].label.split('—')[1]?.trim() || ''}`;
-      // Refresh status bar if it's currently this player's turn
-      if (!gameState.gameOver && gameState.currentPlayer === player) {
-        statusEl.textContent = LABELS[player];
-      }
+      setPlayerLabel(player, name);
       savePrefs();
     });
   });
@@ -1886,7 +1895,7 @@ function handleClick(i, fromAI = false) {
   // ── CHAOS: Wild Turn (30 % chance once, after ≥ 2 pieces on board) ─
   if (chaosMode && chaosHas('wild-turn') && !chaosState.wildUsed && board.filter(v => v).length >= 2) {
     if (Math.random() < 0.3) {
-      const empty = board.reduce((a, v, idx) => v === null ? [...a, idx] : a, []);
+      const empty = rulesBoard().reduce((a, v, idx) => v === null ? [...a, idx] : a, []);
       if (empty.length) {
         chaosState.wildUsed = true;
         markChaosUsed('wild-turn');
@@ -2422,8 +2431,8 @@ function loadPrefs() {
         p.mode === 'hard' ? 'Ancient AI' : p.mode === 'medium' ? 'Medium AI' : 'Easy AI';
     }
     // Restore custom player names (applied after applyTheme which sets defaults)
-    if (p.name1) { const el = document.getElementById('name-egypt'); if (el) el.textContent = p.name1; }
-    if (p.name2) { const el = document.getElementById('name-hindu'); if (el) el.textContent = p.name2; }
+    if (p.name1) { const el = document.getElementById('name-egypt'); if (el) el.textContent = p.name1; setPlayerLabel(EGYPT, p.name1); }
+    if (p.name2) { const el = document.getElementById('name-hindu'); if (el) el.textContent = p.name2; setPlayerLabel(HINDU, p.name2); }
     // Restore audio levels
     if (p.volSfx != null) {
       setVolume(p.volSfx);

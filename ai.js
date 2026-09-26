@@ -45,32 +45,51 @@ function minimax(b, isMax, alpha, beta) {
   }
 }
 
+// First empty cell that completes a line for `player`, or -1.
+function findWinningMove(b, player) {
+  for (let i = 0; i < 9; i++) {
+    if (b[i] !== null) continue;
+    b[i] = player;
+    const wins = boardWinner(b) === player;
+    b[i] = null;
+    if (wins) return i;
+  }
+  return -1;
+}
+
 function getBestMove(b) {
-  const empty = b.reduce((a, v, i) => (v ? a : [...a, i]), []);
+  const empty = b.reduce((a, v, i) => (v === null ? [...a, i] : a), []);
   if (aiMode === 'easy') return empty[randInt(empty.length)];
 
-  // Score every empty cell
-  const scored = empty.map(i => {
-    b[i]      = HINDU;
-    const val = minimax(b, false, -Infinity, Infinity);
-    b[i]      = null;
-    return { i, val };
-  }).sort((a, z) => z.val - a.val); // best first
+  // Win now if possible; otherwise stop an immediate Egypt win.
+  // (minimax scores every win as +10 regardless of how many moves it takes,
+  // so without this Hard can dawdle past a win-in-one.)
+  const win = findWinningMove(b, HINDU);
+  if (win >= 0) return win;
+  const block = findWinningMove(b, EGYPT);
+  if (block >= 0) return block;
 
-  if (aiMode === 'medium') {
-    // Always plays optimally for winning/blocking threats;
-    // otherwise 30 % chance to pick the 2nd-best option
-    const best = scored[0].val;
-    const mustPlay = best === 10 || best > scored[1]?.val;  // winning or blocking
-    if (!mustPlay && scored.length > 1 && Math.random() < 0.30) return scored[1].i;
-    return scored[0].i;
-  }
+  // Medium: sees one move ahead only — after win/block, 35 % of the time it
+  // plays a random cell, which leaves forks and traps for the player to find.
+  if (aiMode === 'medium' && Math.random() < 0.35) return empty[randInt(empty.length)];
 
   // Hard AI: randomise opening to avoid always playing the same game
-  const filled = b.filter(v => v).length;
-  if (filled === 0) return [0, 2, 4, 6, 8][randInt(5)];
-  if (filled === 1 && b[4] === null && Math.random() < 0.6) return 4;
-  return scored[0].i;
+  const pieces = b.filter(v => v === EGYPT || v === HINDU).length;
+  if (pieces === 0) {
+    const openings = [0, 2, 4, 6, 8].filter(i => b[i] === null);
+    if (openings.length) return openings[randInt(openings.length)];
+  }
+  if (pieces === 1 && b[4] === null && Math.random() < 0.6) return 4;
+
+  // Best minimax score; ties go to the lowest index
+  let best = empty[0], bestVal = -Infinity;
+  for (const i of empty) {
+    b[i] = HINDU;
+    const val = minimax(b, false, -Infinity, Infinity);
+    b[i] = null;
+    if (val > bestVal) { bestVal = val; best = i; }
+  }
+  return best;
 }
 
 // Cancels a pending AI move (e.g. the round was restarted mid-think) so a

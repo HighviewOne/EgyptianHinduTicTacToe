@@ -161,3 +161,53 @@ describe('getBestMove with a blocked cell', () => {
     }
   });
 });
+
+// ─── AI strength by difficulty ────────────────────────────────────────────────
+
+describe('getBestMove by difficulty', () => {
+  const { getBestMove, setAiMode } = require('./ai');
+  const E = EGYPT, H = HINDU, _ = null;
+  afterEach(() => jest.restoreAllMocks());
+
+  test.each(['medium', 'hard'])('%s takes a win-in-one over blocking', mode => {
+    setAiMode(mode);
+    // H H _ / E E _ / E _ _  → H wins at 2 (E threatens 5)
+    expect(getBestMove([H, H, _, E, E, _, E, _, _])).toBe(2);
+  });
+
+  test.each(['medium', 'hard'])('%s blocks an immediate threat', mode => {
+    setAiMode(mode);
+    jest.spyOn(Math, 'random').mockReturnValue(0.1);   // would trigger medium's random move
+    // E E _ / _ H _ / _ _ _  → must block at 2
+    expect(getBestMove([E, E, _, _, H, _, _, _, _])).toBe(2);
+  });
+
+  test('hard wins immediately instead of taking a slower forced win', () => {
+    setAiMode('hard');
+    // H _ _ / _ H E / E _ _  → 8 wins now (1 also wins, but later)
+    expect(getBestMove([H, _, _, _, H, E, E, _, _])).toBe(8);
+  });
+
+  test('medium can make a real mistake; hard does not', () => {
+    // Egypt took a corner: only the center avoids a forced loss.
+    const board = [E, _, _, _, _, _, _, _, _];
+    jest.spyOn(Math, 'random').mockReturnValue(0.1);
+    setAiMode('medium');
+    const m = getBestMove([...board]);
+    expect(m).not.toBe(4);
+    const after = [...board]; after[m] = H;
+    expect(minimaxOf(after)).toBe(-10);                // a losing move
+    setAiMode('hard');
+    expect(getBestMove([...board])).toBe(4);
+  });
+
+  test('medium plays the best move when it does not roll a mistake', () => {
+    jest.spyOn(Math, 'random').mockReturnValue(0.9);
+    setAiMode('medium');
+    expect(getBestMove([E, _, _, _, _, _, _, _, _])).toBe(4);
+  });
+
+  function minimaxOf(b) {
+    return require('./ai').minimax(b, false, -Infinity, Infinity);
+  }
+});

@@ -261,3 +261,26 @@ test('New round during a replay stops the replay', () => {
   expect(page.$('status').textContent).not.toMatch(/Replay/);
   expect(page.$('board').querySelectorAll('.win-cell').length).toBe(0);
 });
+
+// ─── Achievements and names ───────────────────────────────────────────────────
+
+test('Achievements unlock only for the human player', () => {
+  page = bootPage();
+  page.clock.tick(INTRO_MS);
+  const ach = () => JSON.parse(page.w.localStorage.getItem('ehttt-ach') || '{}');
+
+  page.w.eval("aiMode = 'hard'; checkAchievements('hindu');");
+  expect(ach()['first-win']).toBeUndefined();
+
+  page.w.eval("spectatorMode = true; checkAchievements('egypt'); spectatorMode = false;");
+  expect(ach()['first-win']).toBeUndefined();
+
+  page.w.eval("checkAchievements('egypt');");
+  expect(ach()['first-win']).toBeDefined();
+});
+
+test('Custom player names are used in the turn label after reload', () => {
+  page = bootPage({ storage: { 'ehttt': { key: 'egypt-hindu', name1: 'Cleo' } } });
+  page.clock.tick(INTRO_MS);
+  expect(page.$('status').textContent).toMatch(/^Cleo's turn/);
+});
