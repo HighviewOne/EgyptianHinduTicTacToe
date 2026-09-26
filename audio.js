@@ -7,18 +7,30 @@
 let audioCtx = null;
 function getCtx() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  // Browsers start (or pause) the context as 'suspended' until a user gesture;
+  // resuming here is a no-op when running and fixes it once the user interacts.
+  if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
   return audioCtx;
 }
+// Resume on the first interaction anywhere, so sounds triggered later outside
+// a gesture (AI moves, timers) still play.
+['pointerdown', 'keydown', 'touchend'].forEach(type =>
+  window.addEventListener(type, () => { if (audioCtx) getCtx(); }, { capture: true, passive: true }));
 
 /* Two independent gain nodes — SFX and music controlled separately */
 let masterGainNode = null;   // SFX (placement, win, draw, chaos sounds)
 let musicGainNode  = null;   // Music (melody + drone)
+// Volumes are stored here so restoring prefs at page load doesn't create the
+// AudioContext before a user gesture (it would start suspended).
+let sfxVolume   = 0.7;
+let musicVolume = 0.55;
+const clampVol = v => Math.max(0, Math.min(1, v));
 
 function getMasterGain() {
   const ctx = getCtx();
   if (!masterGainNode) {
     masterGainNode = ctx.createGain();
-    masterGainNode.gain.setValueAtTime(0.7, ctx.currentTime);
+    masterGainNode.gain.setValueAtTime(sfxVolume, ctx.currentTime);
     masterGainNode.connect(ctx.destination);
   }
   return masterGainNode;
@@ -27,18 +39,18 @@ function getMusicGain() {
   const ctx = getCtx();
   if (!musicGainNode) {
     musicGainNode = ctx.createGain();
-    musicGainNode.gain.setValueAtTime(0.55, ctx.currentTime);
+    musicGainNode.gain.setValueAtTime(musicVolume, ctx.currentTime);
     musicGainNode.connect(ctx.destination);
   }
   return musicGainNode;
 }
 function setVolume(v) {  // SFX volume
-  const ctx = getCtx();
-  getMasterGain().gain.linearRampToValueAtTime(Math.max(0, Math.min(1, v)), ctx.currentTime + 0.04);
+  sfxVolume = clampVol(v);
+  if (masterGainNode) masterGainNode.gain.linearRampToValueAtTime(sfxVolume, audioCtx.currentTime + 0.04);
 }
 function setMusicVolume(v) {
-  const ctx = getCtx();
-  getMusicGain().gain.linearRampToValueAtTime(Math.max(0, Math.min(1, v)), ctx.currentTime + 0.04);
+  musicVolume = clampVol(v);
+  if (musicGainNode) musicGainNode.gain.linearRampToValueAtTime(musicVolume, audioCtx.currentTime + 0.04);
 }
 
 function note(freq, type, gainPeak, attackT, decayT, startOffset = 0) {

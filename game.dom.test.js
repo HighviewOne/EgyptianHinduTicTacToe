@@ -23,7 +23,7 @@ function stub() {
   });
 }
 
-function bootPage({ storage = {} } = {}) {
+function bootPage({ storage = {}, audioContext = null } = {}) {
   const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8')
     .replace(/<script[\s\S]*?<\/script>/g, '');
   const errors = [];
@@ -37,7 +37,7 @@ function bootPage({ storage = {} } = {}) {
     toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval',
              'requestAnimationFrame', 'cancelAnimationFrame'],
   });
-  w.AudioContext = stub();
+  w.AudioContext = audioContext || stub();
   w.HTMLCanvasElement.prototype.getContext = () => stub();
   w.navigator.vibrate = () => true;
   for (const [k, v] of Object.entries(storage)) w.localStorage.setItem(k, JSON.stringify(v));
@@ -327,4 +327,31 @@ test('A newer toast is not hidden early by an older toast timer', () => {
   page.clock.tick(1000);                   // first toast's timer has expired by now
   expect(toast.textContent).toBe('second');
   expect(toast.classList.contains('visible')).toBe(true);
+});
+
+// ─── Audio ────────────────────────────────────────────────────────────────────
+
+test('Saved volume does not create a suspended AudioContext; first click resumes it', () => {
+  const log = { created: 0, resumed: 0 };
+  // Mimics browser autoplay policy: contexts start suspended until resume().
+  const FakeAudioContext = function () {
+    log.created++;
+    const ctx = stub();
+    let state = 'suspended';
+    return new Proxy(ctx, {
+      get: (t, k) => k === 'state' ? state
+        : k === 'resume' ? () => { log.resumed++; state = 'running'; return Promise.resolve(); }
+        : t[k],
+    });
+  };
+  page = bootPage({
+    storage: { 'ehttt': { key: 'egypt-hindu', volSfx: 0.4, volMusic: 0.3 } },
+    audioContext: FakeAudioContext,
+  });
+  page.clock.tick(INTRO_MS);
+  expect(log.created).toBe(0);             // restoring prefs must not create it
+
+  page.clickCell(0);                       // placement sound → context created in a gesture
+  expect(log.created).toBe(1);
+  expect(log.resumed).toBe(1);
 });
