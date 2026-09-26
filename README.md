@@ -7,7 +7,7 @@
 
 [![CI](https://github.com/HighviewOne/EgyptianHinduTicTacToe/actions/workflows/ci.yml/badge.svg)](https://github.com/HighviewOne/EgyptianHinduTicTacToe/actions/workflows/ci.yml)
 [![Deploy](https://github.com/HighviewOne/EgyptianHinduTicTacToe/actions/workflows/pages.yml/badge.svg)](https://github.com/HighviewOne/EgyptianHinduTicTacToe/actions/workflows/pages.yml)
-[![Tests](https://img.shields.io/badge/Tests-29%20passing-brightgreen?style=flat-square)](gameLogic.test.js)
+[![Tests](https://img.shields.io/badge/Tests-63%20passing-brightgreen?style=flat-square)](game.dom.test.js)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
 
 ![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat-square&logo=html5&logoColor=white)
@@ -40,6 +40,7 @@ A fully-featured browser Tic-Tac-Toe game with **cinematic cultural themes**, a 
 - [Tech Stack](#tech-stack)
 - [File Structure](#file-structure)
 - [Running Locally](#running-locally)
+- [Development Notes](#development-notes)
 - [Deploying Your Fork](#deploying-your-fork)
 - [License](#license)
 
@@ -51,7 +52,7 @@ A fully-featured browser Tic-Tac-Toe game with **cinematic cultural themes**, a 
 # No build step needed — open directly in any modern browser
 open index.html
 
-# Run the unit tests
+# Run the tests (first time: npm install)
 npm test
 ```
 
@@ -67,6 +68,7 @@ Standard Tic-Tac-Toe is solved — but this isn't standard Tic-Tac-Toe.
 - **Chaos Mode**: 1–3 randomly chosen rules from a 13-rule catalogue activate each round — pieces teleport, swap allegiances, get smited by lightning, or players lose their turn entirely. Every game is different.
 - **Strategic depth**: Three AI levels (Easy / Medium / Hard) where Hard uses full minimax with alpha-beta pruning. The position evaluation bar shows who's winning in real time. Move quality badges (✓ / ≈ / ✗) rate each decision.
 - **AI vs AI Demo**: Watch two Hard AIs battle each other continuously, with opening move announcements and auto-restart.
+- **Accessible**: full keyboard play, screen-reader labels for the board and controls, proper dialogs, and a reduced-motion mode that keeps every highlight visible.
 
 ---
 
@@ -96,9 +98,11 @@ Each theme ships with:
 |---|---|
 | 2 Players | Local hot-seat |
 | vs AI — Easy | Random moves |
-| vs AI — Medium | 50 % random, 50 % minimax |
-| vs AI — Hard | Full minimax + alpha-beta pruning (unbeatable) |
-| 👁 AI Demo | AI vs AI — watch Hard play itself, auto-restarts |
+| vs AI — Medium | Always takes a winning move and blocks yours; otherwise 35 % random, else minimax. Beatable with forks |
+| vs AI — Hard | Full minimax + alpha-beta pruning (unbeatable); takes immediate wins |
+| 👁 AI Demo | AI vs AI — watch Hard play itself, auto-restarts. Demo games don't count toward stats or achievements |
+
+**Undo** (`U`, ↩ button, or swipe left) works mid-game and right after a game ends — undoing a finished game also takes back its score and stats (achievements already earned stay).
 
 ---
 
@@ -118,7 +122,7 @@ Toggle Chaos mode to activate 1–3 randomly chosen rules each round. Active rul
 | Chaos Storm | 🌪 | The board shakes violently after every move |
 | Solar Flare | 🌟 | A blinding flash strikes at the worst moment |
 | Divine Lag | ⏳ | All input freezes for 3 celestial seconds |
-| Holy Ground | ⛪ | One cell is cursed — no piece may be placed there |
+| Holy Ground | ⛪ | One cell is cursed — no piece may be placed there (if it's the last empty cell, the game is a draw) |
 | Phantom Veil | 👁 | All pieces vanish from sight for 1.5 seconds |
 | Treachery | 🗡 | 25 % chance a newly placed piece betrays its owner |
 
@@ -157,7 +161,7 @@ Select **Best of 3 / 5 / 7** from the Match row. Pip indicators on each player c
 
 ## Achievements
 
-18 unlockable achievements stored in `localStorage`. A slide-in toast confirms each unlock; multiple unlocks queue gracefully.
+18 unlockable achievements stored in `localStorage`. A slide-in toast confirms each unlock; multiple unlocks queue gracefully. Achievements are earned by human players only — never in AI Demo mode or when the AI wins.
 
 | Achievement | Condition |
 |---|---|
@@ -189,7 +193,9 @@ The 📊 Stats button opens a modal showing:
 - Best win streak
 - Player-1 win rate
 - Last 10 games as colored result dots
-- **Cell hot-spots heatmap**: 3×3 grid showing which cells are played most often (persisted across sessions)
+- **Cell hot-spots heatmap**: 3×3 grid showing which cells human players pick most often (persisted across sessions)
+
+AI Demo games are not counted.
 
 ---
 
@@ -201,17 +207,24 @@ The 📊 Stats button opens a modal showing:
 | `Numpad 1`–`9` | Place on cell (board-intuitive; Numpad 7 = top-left) |
 | `N` | New round |
 | `M` | Toggle music |
+| `Arrow keys` + `Enter`/`Space` | Move around the board and place a piece |
 | `U` | Undo last move |
 | `H` | Show move hint (pulses best cell for 1.8 s) |
+| `A` | Open/close post-game analysis |
+| `R` | Replay last game |
+| `S` | Toggle AI demo mode |
+| `C` | Chaos rule picker (when Chaos is on) |
 | `F` | Toggle fullscreen |
 | `?` | Toggle keyboard shortcut help panel |
 | `Escape` | Close overlays |
+
+Shortcuts are ignored while you're typing a player name.
 
 ---
 
 ## Procedural Music
 
-Each theme has its own modal scale, melody pattern, step tempo, and drone frequencies built from Web Audio API oscillators — no audio files required. Music crossfades on theme change and layers an LFO-modulated ambient drone beneath the melody. A **volume slider** controls all audio through a master gain node.
+Each theme has its own modal scale, melody pattern, step tempo, and drone frequencies built from Web Audio API oscillators — no audio files required. Music crossfades on theme change and layers an LFO-modulated ambient drone beneath the melody. Two **volume sliders** control sound effects and music separately. Browsers block audio until you interact with the page, so sound starts after your first click, tap or keypress.
 
 ---
 
@@ -225,9 +238,9 @@ Each theme has its own modal scale, melody pattern, step tempo, and drone freque
 | AI | Minimax algorithm with alpha-beta pruning |
 | Audio | Web Audio API — oscillators, gain, LFO |
 | Persistence | `localStorage` |
-| Offline | Service Worker (offline-first cache) |
+| Offline | Service Worker (network-first, cache fallback — always fresh online, playable offline) |
 | Install | Web App Manifest (PWA) |
-| Testing | Jest + jsdom (29 unit tests) |
+| Testing | Jest (unit tests) + jsdom with fake timers (integration tests that boot the real page) — 63 tests |
 | CI/CD | GitHub Actions → GitHub Pages |
 
 ---
@@ -237,15 +250,16 @@ Each theme has its own modal scale, melody pattern, step tempo, and drone freque
 ```
 index.html          static shell and all overlays
 manifest.json       PWA manifest (installable, offline-ready)
-sw.js               service worker — offline-first cache
+sw.js               service worker — network-first, offline fallback
 icon.svg            app icon
-styles.css          CSS custom-property theming system (~1 400 lines)
+styles.css          CSS custom-property theming system (~1 800 lines)
 data.js             all static data: themes, chaos rules, quips, achievements
 audio.js            Web Audio API — sound effects + procedural background music
 ai.js               minimax with alpha-beta pruning + mode management
 script.js           game loop, UI, chaos engine, events, localStorage
-gameLogic.js        pure game logic — board and win detection (Jest-tested)
-gameLogic.test.js   29 unit tests
+gameLogic.js        pure game logic — board, win detection, Holy Ground blocking
+gameLogic.test.js   unit tests — game logic and AI move choice
+game.dom.test.js    integration tests — boots index.html in jsdom with fake timers
 LICENSE             MIT
 ```
 
@@ -256,6 +270,7 @@ LICENSE             MIT
 | `ehttt` | Preferences: theme, AI mode, fun modes, match length |
 | `ehttt-stats` | All-time stats: games, wins, draws, streaks, cell frequency |
 | `ehttt-ach` | Unlocked achievements + themes-played tracking |
+| `ehttt-game` | In-progress game, offered for restore on the next visit |
 
 ---
 
@@ -271,9 +286,21 @@ cd EgyptianHinduTicTacToe
 # Play (macOS)
 open index.html
 
-# Run the 29 unit tests
+# Run the tests
+npm install
 npm test
 ```
+
+---
+
+## Development Notes
+
+A few conventions keep the game's many timers and chaos rules from interfering with each other:
+
+- **Round-scoped timers** — any delayed action that belongs to the current round (a toast, a status restore, the win seal…) must use `roundTimeout(fn, ms)`, not `setTimeout`. `newRound()` and `undo()` cancel them all, so nothing fires into the next round. Plain `setTimeout` is only for cosmetic cleanup that must always run, like removing an animation class.
+- **AI moves** — `scheduleAI()` / `scheduleSpectatorAI()` store their pending move in `aiTimer`; call `cancelAI()` whenever the board is replaced.
+- **Holy Ground** — anything that picks or checks a move (AI, hints, move timer, win/draw check) should use `rulesBoard()`, which marks the forbidden cell as unplayable.
+- **Tests** — `game.dom.test.js` loads the real page, so a new bug can usually be reproduced there first: drive it with `clickCell`, `key` and `clock.tick`, and control randomness with `setRandom`.
 
 ---
 

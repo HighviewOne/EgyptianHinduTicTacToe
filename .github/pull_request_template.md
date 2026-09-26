@@ -20,7 +20,7 @@
 
 - [ ] Opened `index.html` locally and played a full game
 - [ ] Tested the affected theme(s) and mode(s)
-- [ ] Ran `npm test` — all 29 tests pass
+- [ ] Ran `npm test` — all tests pass
 - [ ] Checked browser console for errors
 - [ ] Tested on at least one mobile viewport (or N/A)
 
