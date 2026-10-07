@@ -603,3 +603,25 @@ test('Restoring a chaos game brings back its rules, used rules and streaks', () 
   page.clickCell(8);                       // still Holy Ground
   expect(page.t.state.board[8]).toBeNull();
 });
+
+test('Swipes on the board: diagonal drags and short downward drags do nothing', () => {
+  page = bootPage();
+  page.clock.tick(INTRO_MS);
+  page.clickCell(0);
+  const wrap = page.w.document.querySelector('.board-wrapper');
+  const swipe = (dx, dy) => {
+    const t = (x, y) => [{ clientX: x, clientY: y }];
+    const ev = (type, x, y) => { const e = new page.w.Event(type, { bubbles: true }); e.changedTouches = t(x, y); wrap.dispatchEvent(e); };
+    ev('touchstart', 100, 100); ev('touchend', 100 + dx, 100 + dy);
+  };
+  const music = () => page.w.eval('musicPlaying');
+  const before = music();
+  swipe(0, 80);                            // page-scroll-sized drag
+  expect(music()).toBe(before);
+  swipe(70, 60);                           // diagonal: not a new round
+  expect(page.t.state.board[0]).toBe('egypt');
+  swipe(0, 160);                           // long swipe down → music
+  expect(music()).toBe(!before);
+  swipe(-120, 5);                          // swipe left → undo
+  expect(page.t.state.board[0]).toBeNull();
+});

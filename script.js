@@ -2864,11 +2864,13 @@ boardWrapEl.addEventListener('touchend', e => {
   // ignore swipes that originate on interactive elements
   const tag = (e.target || {}).tagName;
   if (/INPUT|SELECT|BUTTON/.test(tag)) return;
-  if (adx > ady) {
+  // Only clear, mostly-straight swipes count; a page scroll that starts on the
+  // board is a short-ish vertical drag, so music needs a long one.
+  if (adx > ady * 2) {
     if (dx < 0) undo();       // swipe left → undo
     else        newRound();   // swipe right → new round
-  } else {
-    if (dy > 0) toggleMusic(); // swipe down → music
+  } else if (ady > adx * 2 && dy > 140) {
+    toggleMusic();            // long swipe down → music
   }
 }, { passive: true });
 
