@@ -497,3 +497,38 @@ test('Switching theme: the demo AI waits for the intro to be dismissed', () => {
   page.clock.tick(INTRO_MS);
   expect(page.pieces('egypt')).toBeGreaterThanOrEqual(1);
 });
+
+// ─── Review follow-ups ────────────────────────────────────────────────────────
+
+test('Move quality: a slower win is "fine", throwing away a win is a "blunder"', () => {
+  page = bootPage();
+  const q = i => page.w.eval(`computeMoveDetails(['hindu',null,null,null,'hindu','egypt','egypt',null,null], 'hindu', ${i}).quality`);
+  expect(q(8)).toBe('best');               // wins now
+  expect(q(1)).toBe('fine');               // fork: still wins, just later
+  expect(q(3)).toBe('blunder');            // gives up the forced win
+});
+
+test('Holy Ground: no threat highlight on the forbidden cell', () => {
+  page = bootPage();
+  page.clock.tick(INTRO_MS);
+  page.setRandom(0.5);                     // holy cell = 4
+  page.t.setChaosEnabled(['holy-ground']);
+  page.$('btn-chaos').click();
+  page.clock.tick(CHAOS_MS);
+  [0, 1, 8].forEach(i => page.clickCell(i));   // Egypt has 0 and 8; 4 would complete the diagonal
+
+  const center = page.$('board').children[4];
+  expect(center.classList.contains('threat-egypt')).toBe(false);
+});
+
+test('Undoing a win also cancels its pending rank-up / milestone toasts', () => {
+  page = bootPage({ storage: { 'ehttt-stats': { egypt: 4, gamesPlayed: 4 } } });  // next win → Strategist + 5-win milestone
+  page.clock.tick(INTRO_MS);
+  page.setRandom(0.9);
+  playEgyptTopRowWin(page);
+  page.clock.tick(100);
+  page.key('KeyU');
+  const seen = [];
+  for (let t = 0; t < 4000; t += 100) { page.clock.tick(100); seen.push(page.$('chaos-event').textContent); }
+  expect(seen.some(x => /RANKS UP|Victories/.test(x))).toBe(false);
+});

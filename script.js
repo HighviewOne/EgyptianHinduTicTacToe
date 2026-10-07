@@ -110,7 +110,7 @@ function maybeShowTip() {
   if (!DID_YOU_KNOW || Math.random() > 0.25) return;
   const tip = DID_YOU_KNOW[_dykIdx % DID_YOU_KNOW.length];
   _dykIdx++;
-  setTimeout(() => showChaosEvent(tip, 4800), 3500);
+  roundTimeout(() => showChaosEvent(tip, 4800), 3500);
 }
 
 /* ─────────────────────────────────────────────
@@ -281,10 +281,10 @@ function updateAllTimeStats(outcome) {
     const newR1 = getRank(s.egypt || 0);
     const newR2 = getRank(s.hindu || 0);
     if (newR1.label !== oldR1 && s.egypt > 0) {
-      setTimeout(() => showChaosEvent(`⬆️ ${currentTheme.players.egypt.name} RANKS UP: ${newR1.label}!`, 3200), 2000);
+      roundTimeout(() => showChaosEvent(`⬆️ ${currentTheme.players.egypt.name} RANKS UP: ${newR1.label}!`, 3200), 2000);
     }
     if (newR2.label !== oldR2 && s.hindu > 0) {
-      setTimeout(() => showChaosEvent(`⬆️ ${currentTheme.players.hindu.name} RANKS UP: ${newR2.label}!`, 3200), 2000);
+      roundTimeout(() => showChaosEvent(`⬆️ ${currentTheme.players.hindu.name} RANKS UP: ${newR2.label}!`, 3200), 2000);
     }
   }
   updateRankBadges();
@@ -301,7 +301,7 @@ function updateAllTimeStats(outcome) {
     };
     Object.entries(_milestones).forEach(([n, msg]) => {
       if (prevTotal < +n && totalWins >= +n)
-        setTimeout(() => showChaosEvent(msg, 3500), 2500);
+        roundTimeout(() => showChaosEvent(msg, 3500), 2500);
     });
   }
 }
@@ -624,6 +624,7 @@ function renderBoard(winCells = []) {
     : (currentTheme.p2ink || '#3a4a8a');
   boardEl.style.setProperty('--hover-ink', _hoverInk);
 
+  const _rb = rulesBoard();   // Holy Ground cell can't be played, so no threat there
   gameState.board.forEach((val, i) => {
     const cell = document.createElement('div');
     cell.className = 'cell';
@@ -666,9 +667,9 @@ function renderBoard(winCells = []) {
     }
     // Threat highlighting — only during human turn (no point showing while AI thinks)
     const _humanTurn = !aiMode || gameState.currentPlayer === EGYPT;
-    if (!val && !gameState.gameOver && !fogMode && _humanTurn && !spectatorMode) {
+    if (_rb[i] === null && !gameState.gameOver && !fogMode && _humanTurn && !spectatorMode) {
       for (const player of [EGYPT, HINDU]) {
-        const testB = [...gameState.board];
+        const testB = [..._rb];
         testB[i] = player;
         if (boardWinner(testB) === player) cell.classList.add(`threat-${player}`);
       }
@@ -833,8 +834,8 @@ function updateEvalBar(isHinduTurn) {
     if (pH) pH.textContent = '50%';
     return;
   }
-  const score = minimax([...gameState.board], isHinduTurn, -Infinity, Infinity);
-  // +10 = HINDU wins, -10 = EGYPT wins → hinduPct in [0,100]
+  // Only the outcome with best play: +10 = HINDU wins, -10 = EGYPT wins, 0 = draw
+  const score = Math.sign(minimax(rulesBoard(), isHinduTurn, -Infinity, Infinity)) * 10;
   const hinduPct = Math.round((score + 10) / 20 * 100);
   eEl.style.width = `${100 - hinduPct}%`;
   hEl.style.width = `${hinduPct}%`;
@@ -855,15 +856,17 @@ function computeMoveDetails(snap, player, moveIdx) {
   let bestIdx = empty[0];
   for (const idx of empty) {
     b[idx] = player;
-    const val = minimax(b, !isMax, -Infinity, Infinity);
+    const val = minimax(b, !isMax, -Infinity, Infinity, 1);
     b[idx] = null;
     if (isMax ? val > bestEval : val < bestEval) { bestEval = val; bestIdx = idx; }
   }
   b[moveIdx] = player;
-  const actualEval = minimax(b, !isMax, -Infinity, Infinity);
+  const actualEval = minimax(b, !isMax, -Infinity, Infinity, 1);
   b[moveIdx] = null;
-  const delta = isMax ? (bestEval - actualEval) : (actualEval - bestEval);
-  const quality = delta <= 0 ? 'best' : delta < 10 ? 'fine' : 'blunder';
+  // best: as good as it gets · fine: same result, just slower (a later win or
+  // an earlier loss) · blunder: throws away a win or a draw
+  const quality = actualEval === bestEval ? 'best'
+                : Math.sign(actualEval) === Math.sign(bestEval) ? 'fine' : 'blunder';
   return { quality, bestIdx };
 }
 function showMoveBadge(cellIdx, quality) {
@@ -889,7 +892,7 @@ function getHintMove(b, player) {
     let best = -Infinity, move = empty[0];
     for (const i of empty) {
       b[i] = HINDU;
-      const val = minimax(b, false, -Infinity, Infinity);
+      const val = minimax(b, false, -Infinity, Infinity, 1);
       b[i] = null;
       if (val > best) { best = val; move = i; }
     }
@@ -898,7 +901,7 @@ function getHintMove(b, player) {
     let best = Infinity, move = empty[0];
     for (const i of empty) {
       b[i] = EGYPT;
-      const val = minimax(b, true, -Infinity, Infinity);
+      const val = minimax(b, true, -Infinity, Infinity, 1);
       b[i] = null;
       if (val < best) { best = val; move = i; }
     }
@@ -1200,7 +1203,13 @@ function pickChaosRules() {
   const eligible = CHAOS_RULES.filter(r => chaosEnabled.has(r.id));
   if (!eligible.length) return CHAOS_RULES.slice(0, 1); // fallback: never empty
   const n        = Math.min(1 + randInt(3), eligible.length);
-  return [...eligible].sort(() => Math.random() - .5).slice(0, n);
+  // Fisher–Yates (sorting with a random comparator is biased)
+  const pool = [...eligible];
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = randInt(i + 1);
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  return pool.slice(0, n);
 }
 
 function initChaosState() {
@@ -2321,8 +2330,8 @@ function handleClick(i, fromAI = false) {
     updateEvalBar(gameState.currentPlayer === HINDU);
     // Warn human player when they're in a forced-loss position (only meaningful after move 4)
     if (aiMode && !spectatorMode && gameState.currentPlayer === EGYPT && !gameState.gameOver && moveLog.length >= 4) {
-      const _score = minimax([...gameState.board], false, -Infinity, Infinity);
-      if (_score === 10) roundTimeout(() => { if (!gameState.gameOver) showChaosEvent('⚠ Forced loss — find your best move!', 2600); }, 500);
+      const _score = minimax(rulesBoard(), false, -Infinity, Infinity);
+      if (_score > 0) roundTimeout(() => { if (!gameState.gameOver) showChaosEvent('⚠ Forced loss — find your best move!', 2600); }, 500);
     }
     scheduleAI();
     scheduleSpectatorAI();

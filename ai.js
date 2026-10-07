@@ -14,10 +14,13 @@ function boardWinner(b) {
   return null;
 }
 
-function minimax(b, isMax, alpha, beta) {
+// Score from India's side: a win is worth 10 minus the moves it takes, so
+// faster wins (and slower losses) score better. Always in [-10, 10];
+// the sign alone says who wins with best play (0 = draw).
+function minimax(b, isMax, alpha, beta, depth = 0) {
   const w = boardWinner(b);
-  if (w === HINDU) return  10;
-  if (w === EGYPT) return -10;
+  if (w === HINDU) return  10 - depth;
+  if (w === EGYPT) return depth - 10;
   if (b.every(v => v))    return 0;
 
   if (isMax) {
@@ -25,7 +28,7 @@ function minimax(b, isMax, alpha, beta) {
     for (let i = 0; i < 9; i++) {
       if (b[i]) continue;
       b[i] = HINDU;
-      best  = Math.max(best, minimax(b, false, alpha, beta));
+      best  = Math.max(best, minimax(b, false, alpha, beta, depth + 1));
       b[i]  = null;
       alpha = Math.max(alpha, best);
       if (beta <= alpha) break;
@@ -36,7 +39,7 @@ function minimax(b, isMax, alpha, beta) {
     for (let i = 0; i < 9; i++) {
       if (b[i]) continue;
       b[i] = EGYPT;
-      best  = Math.min(best, minimax(b, true, alpha, beta));
+      best  = Math.min(best, minimax(b, true, alpha, beta, depth + 1));
       b[i]  = null;
       beta  = Math.min(beta, best);
       if (beta <= alpha) break;
@@ -62,8 +65,7 @@ function getBestMove(b) {
   if (aiMode === 'easy') return empty[randInt(empty.length)];
 
   // Win now if possible; otherwise stop an immediate Egypt win.
-  // (minimax scores every win as +10 regardless of how many moves it takes,
-  // so without this Hard can dawdle past a win-in-one.)
+  // (Also what keeps Medium from missing a win or a block.)
   const win = findWinningMove(b, HINDU);
   if (win >= 0) return win;
   const block = findWinningMove(b, EGYPT);
@@ -85,7 +87,7 @@ function getBestMove(b) {
   let best = empty[0], bestVal = -Infinity;
   for (const i of empty) {
     b[i] = HINDU;
-    const val = minimax(b, false, -Infinity, Infinity);
+    const val = minimax(b, false, -Infinity, Infinity, 1);
     b[i] = null;
     if (val > bestVal) { bestVal = val; best = i; }
   }

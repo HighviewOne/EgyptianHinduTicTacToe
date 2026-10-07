@@ -196,7 +196,7 @@ describe('getBestMove by difficulty', () => {
     const m = getBestMove([...board]);
     expect(m).not.toBe(4);
     const after = [...board]; after[m] = H;
-    expect(minimaxOf(after)).toBe(-10);                // a losing move
+    expect(minimaxOf(after)).toBeLessThan(0);          // a losing move
     setAiMode('hard');
     expect(getBestMove([...board])).toBe(4);
   });
@@ -205,6 +205,14 @@ describe('getBestMove by difficulty', () => {
     jest.spyOn(Math, 'random').mockReturnValue(0.9);
     setAiMode('medium');
     expect(getBestMove([E, _, _, _, _, _, _, _, _])).toBe(4);
+  });
+
+  test('minimax scores a faster win higher than a slower one', () => {
+    // H _ _ / _ H E / E _ _ , India to move: 8 wins now; 1 forks and wins later
+    const val = i => { const b = [H, _, _, _, H, E, E, _, _]; b[i] = H; return require('./ai').minimax(b, false, -Infinity, Infinity, 1); };
+    expect(val(8)).toBe(9);
+    expect(val(1)).toBeGreaterThan(0);
+    expect(val(1)).toBeLessThan(val(8));
   });
 
   function minimaxOf(b) {
