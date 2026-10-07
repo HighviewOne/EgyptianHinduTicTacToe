@@ -409,3 +409,91 @@ test('Dialogs: inert while closed, take focus when opened, return it on close', 
   expect(lore.hasAttribute('inert')).toBe(true);
   expect(page.w.document.activeElement).toBe(opener);
 });
+
+// ─── Full-review fixes ────────────────────────────────────────────────────────
+
+test('Cursed Skip re-renders for the new player (fog) and restarts their timer', () => {
+  page = bootPage();
+  page.clock.tick(INTRO_MS);
+  page.setRandom(0.9);
+  page.t.setChaosEnabled(['cursed-skip']);
+  page.$('btn-fog').click();
+  page.$('btn-timed').click();
+  page.$('btn-chaos').click();
+  page.clock.tick(CHAOS_MS);
+
+  page.setRandom(0.1);                     // < 0.18 → India's next turn will be skipped
+  page.clickCell(0);
+  page.setRandom(0.9);
+  page.clickCell(4);                       // India's move is swallowed by the skip
+
+  expect(page.t.state.board[4]).toBeNull();
+  expect(page.t.state.currentPlayer).toBe('egypt');
+  const own = page.$('board').children[0];
+  expect(own.classList.contains('fog-hidden')).toBe(false);   // Egypt sees its own piece
+  expect(page.$('timer-wrap').classList.contains('active')).toBe(true);
+});
+
+test('A hint followed by a quick move does not restore the old status text', () => {
+  page = bootPage();
+  page.clock.tick(INTRO_MS);
+  page.setRandom(0.9);
+  page.clickCell(0);
+  page.$('btn-hint').click();              // India's hint
+  page.clickCell(4);                       // India moves before the hint expires
+  page.clock.tick(2000);
+
+  expect(page.t.state.currentPlayer).toBe('egypt');
+  expect(page.$('status').textContent).toMatch(/^Egypt's turn/);
+});
+
+test('Restore brings back the replay log and drops undo history of the replaced board', () => {
+  page = bootPage({
+    storage: {
+      'ehttt-game': {
+        board: ['egypt', null, null, null, 'hindu', null, null, null, null],
+        currentPlayer: 'egypt', scores: { egypt: 0, hindu: 0, draws: 0 }, cosmicAngle: 0,
+        moveLog: [{ player: 'egypt', pos: 'A1', turn: 1, quality: 'best' },
+                  { player: 'hindu', pos: 'B2', turn: 2, quality: 'best' }],
+        gameLog: [['egypt', null, null, null, null, null, null, null, null],
+                  ['egypt', null, null, null, 'hindu', null, null, null, null]],
+        lastPlacedCell: 4,
+      },
+    },
+  });
+  page.clock.tick(INTRO_MS);
+  page.setRandom(0.9);
+  page.clickCell(8);                       // a move on the fresh board before restoring
+  page.$('restore-yes').click();
+
+  expect(page.w.eval('gameLog.length')).toBe(2);
+  expect(page.t.state.history).toEqual([]);
+  expect(page.$('btn-undo').disabled).toBe(true);
+});
+
+test('Demo mode: games are not auto-saved and undo is disabled', () => {
+  page = bootPage();
+  page.clock.tick(INTRO_MS);
+  page.setRandom(0.9);
+  page.$('btn-spectator').click();
+  page.clock.tick(1500);
+  expect(page.pieces('egypt')).toBeGreaterThanOrEqual(1);
+  expect(page.w.localStorage.getItem('ehttt-game')).toBeNull();
+
+  const before = [...page.t.state.board];
+  page.key('KeyU');
+  expect(page.t.state.board).toEqual(before);
+  expect(page.$('btn-undo').disabled).toBe(true);
+});
+
+test('Switching theme: the demo AI waits for the intro to be dismissed', () => {
+  page = bootPage();
+  page.clock.tick(INTRO_MS);
+  page.setRandom(0.9);
+  page.$('btn-spectator').click();
+  page.w.document.querySelector('.theme-btn[data-theme="classic"]').click();
+  page.clock.tick(2000);                   // intro still up
+  expect(page.pieces('egypt')).toBe(0);
+  page.clock.tick(INTRO_MS);
+  expect(page.pieces('egypt')).toBeGreaterThanOrEqual(1);
+});

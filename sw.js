@@ -45,6 +45,7 @@ self.addEventListener('fetch', ev => {
         }
         return res;
       })
-      .catch(() => caches.match(req).then(r => r || caches.match('index.html')))
+      .catch(() => caches.match(req).then(r =>
+        r || (req.mode === 'navigate' ? caches.match('index.html') : Response.error())))
   );
 });

@@ -7,7 +7,7 @@
 
 [![CI](https://github.com/HighviewOne/EgyptianHinduTicTacToe/actions/workflows/ci.yml/badge.svg)](https://github.com/HighviewOne/EgyptianHinduTicTacToe/actions/workflows/ci.yml)
 [![Deploy](https://github.com/HighviewOne/EgyptianHinduTicTacToe/actions/workflows/pages.yml/badge.svg)](https://github.com/HighviewOne/EgyptianHinduTicTacToe/actions/workflows/pages.yml)
-[![Tests](https://img.shields.io/badge/Tests-63%20passing-brightgreen?style=flat-square)](game.dom.test.js)
+[![Tests](https://img.shields.io/badge/Tests-68%20passing-brightgreen?style=flat-square)](game.dom.test.js)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
 
 ![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat-square&logo=html5&logoColor=white)
@@ -102,7 +102,7 @@ Each theme ships with:
 | vs AI — Hard | Full minimax + alpha-beta pruning (unbeatable); takes immediate wins |
 | 👁 AI Demo | AI vs AI — watch Hard play itself, auto-restarts. Demo games don't count toward stats or achievements |
 
-**Undo** (`U`, ↩ button, or swipe left) works mid-game and right after a game ends — undoing a finished game also takes back its score and stats (achievements already earned stay).
+**Undo** (`U`, ↩ button, or swipe left on the board) works mid-game and right after a game ends — undoing a finished game also takes back its score and stats (achievements already earned stay).
 
 ---
 
@@ -240,7 +240,7 @@ Each theme has its own modal scale, melody pattern, step tempo, and drone freque
 | Persistence | `localStorage` |
 | Offline | Service Worker (network-first, cache fallback — always fresh online, playable offline) |
 | Install | Web App Manifest (PWA) |
-| Testing | Jest (unit tests) + jsdom with fake timers (integration tests that boot the real page) — 63 tests |
+| Testing | Jest (unit tests) + jsdom with fake timers (integration tests that boot the real page) — 68 tests |
 | CI/CD | GitHub Actions → GitHub Pages |
 
 ---

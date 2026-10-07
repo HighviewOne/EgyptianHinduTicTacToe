@@ -119,7 +119,8 @@ function maybeShowTip() {
 const GAME_SAVE_KEY = 'ehttt-game';
 
 function autoSaveGame() {
-  if (gameState.gameOver) { try { localStorage.removeItem(GAME_SAVE_KEY); } catch(_) {} return; }
+  // Demo games aren't the player's to resume.
+  if (gameState.gameOver || spectatorMode) { clearGameSave(); return; }
   try {
     localStorage.setItem(GAME_SAVE_KEY, JSON.stringify({
       board:         gameState.board,
@@ -127,6 +128,7 @@ function autoSaveGame() {
       scores:        gameState.scores,
       cosmicAngle:   cosmicAngle,
       moveLog:       moveLog,
+      gameLog:       gameLog,
       lastPlacedCell: lastPlacedCell,
     }));
   } catch(_) {}
@@ -136,12 +138,17 @@ function clearGameSave() {
   try { localStorage.removeItem(GAME_SAVE_KEY); } catch(_) {}
 }
 
+// The save offered by the restore banner. Kept in memory because playing on
+// before answering the banner auto-saves over it in localStorage.
+let offeredSave = null;
+
 function tryRestoreGame() {
   try {
     const raw = localStorage.getItem(GAME_SAVE_KEY);
     if (!raw) return;
     const g = JSON.parse(raw);
     if (!g.board || !g.board.some(v => v)) { clearGameSave(); return; }
+    offeredSave = g;
     // Show restore banner
     const banner = document.getElementById('restore-banner');
     if (banner) banner.style.display = '';
@@ -150,14 +157,21 @@ function tryRestoreGame() {
 
 function applyRestore() {
   try {
-    const g = JSON.parse(localStorage.getItem(GAME_SAVE_KEY) || 'null');
+    const g = offeredSave;
+    offeredSave = null;
     if (!g) return;
     cancelAI();
+    cancelRoundTimers();
+    stopReplay();
+    clearTimer();
+    gameState.history       = [];   // undo snapshots belong to the replaced board
     gameState.board         = g.board;
     gameState.currentPlayer = g.currentPlayer || EGYPT;
     gameState.scores        = g.scores || { egypt: 0, hindu: 0, draws: 0 };
     cosmicAngle   = g.cosmicAngle || 0;
     moveLog       = g.moveLog    || [];
+    // Older saves have no replay log; replay then can't line up with the moves.
+    gameLog       = Array.isArray(g.gameLog) && g.gameLog.length === moveLog.length ? g.gameLog : [];
     lastPlacedCell = g.lastPlacedCell != null ? g.lastPlacedCell : -1;
     gameState.gameOver = false;
     clearGameSave();
@@ -1135,7 +1149,8 @@ function replayGame() {
       statusEl.className   = 'status-text egypt-msg';
       statusEl.textContent = `↺ Replaying ${totalMoves}-move game…`;
     } else {
-      const logEntry = moveLog[step - 1];
+      // gameLog can be shorter than moveLog (game restored from an older save)
+      const logEntry = moveLog[moveLog.length - totalMoves + step - 1];
       const pl = logEntry ? logEntry.player : EGYPT;
       statusEl.className   = `status-text ${pl}-msg`;
       statusEl.textContent = `↺ Move ${step} / ${totalMoves} — ${SYMBOLS[pl] || ''} ${logEntry ? logEntry.pos : ''}`;
@@ -1408,7 +1423,7 @@ function burstParticles(winner) {
 ───────────────────────────────────────────── */
 function updateUndoBtn() {
   const btn = document.getElementById('btn-undo');
-  if (btn) btn.disabled = !gameState.history.length || !!aiThinking;
+  if (btn) btn.disabled = !gameState.history.length || !!aiThinking || spectatorMode;
 }
 
 function saveSnapshot() {
@@ -1433,7 +1448,7 @@ function saveSnapshot() {
 }
 
 function undo() {
-  if (!gameState.history.length || aiThinking) return;
+  if (!gameState.history.length || aiThinking || spectatorMode) return;
   const snap = gameState.history.pop();
   const wasOver = gameState.gameOver;
   cancelRoundTimers();
@@ -1743,8 +1758,9 @@ function applyTheme(key) {
   aiThinking = false;
   boardEl.classList.remove('ai-thinking');
 
-  resetScores();
+  // Intro first, so the new round's AI / timer wait until it is dismissed.
   showIntro();
+  resetScores();
   savePrefs();
 }
 
@@ -1873,8 +1889,10 @@ function handleClick(i, fromAI = false) {
     return;
   }
 
-  // Clear move timer as soon as a move is registered
+  // Clear move timer as soon as a move is registered, and drop a pending hint
+  // restore — it would put the previous player's status text back.
   clearTimer();
+  clearTimeout(hintTimer);
 
   // Save snapshot for undo (human moves only)
   if (!aiMode || currentPlayer === EGYPT) saveSnapshot();
@@ -1888,9 +1906,12 @@ function handleClick(i, fromAI = false) {
     statusEl.className   = `status-text ${gameState.currentPlayer}-msg`;
     statusEl.textContent = LABELS[gameState.currentPlayer];
     setAura(gameState.currentPlayer);
+    renderBoard();   // fog and the hover symbol depend on whose turn it is
     updateTurnUI();
     scheduleAI();
     scheduleSpectatorAI();
+    if (!spectatorMode && (!aiMode || gameState.currentPlayer === EGYPT)) startTimer();
+    autoSaveGame();
     return;
   }
 
@@ -2762,13 +2783,14 @@ document.getElementById('btn-copy-moves').addEventListener('click', copyMoves);
 /* ─────────────────────────────────────────────
    Touch swipe gestures
    Left → undo  |  Right → new round  |  Down → music toggle
+   Board only: on the rest of the page these are just scrolling.
 ───────────────────────────────────────────── */
 let _swipeX = 0, _swipeY = 0;
-document.body.addEventListener('touchstart', e => {
+boardWrapEl.addEventListener('touchstart', e => {
   _swipeX = e.changedTouches[0].clientX;
   _swipeY = e.changedTouches[0].clientY;
 }, { passive: true });
-document.body.addEventListener('touchend', e => {
+boardWrapEl.addEventListener('touchend', e => {
   const dx = e.changedTouches[0].clientX - _swipeX;
   const dy = e.changedTouches[0].clientY - _swipeY;
   const adx = Math.abs(dx), ady = Math.abs(dy);
@@ -2873,5 +2895,6 @@ document.getElementById('restore-yes').addEventListener('click', () => {
 });
 document.getElementById('restore-no').addEventListener('click', () => {
   document.getElementById('restore-banner').style.display = 'none';
-  clearGameSave();
+  offeredSave = null;
+  autoSaveGame();   // replace the declined save with the current game (if any)
 });
