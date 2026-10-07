@@ -574,3 +574,32 @@ test('Renaming to the theme name (or blank) goes back to the theme default', () 
   expect(el.textContent).toBe('Egypt');
   expect(JSON.parse(page.w.localStorage.getItem('ehttt')).name1).toBe('');
 });
+
+test('Restoring a chaos game brings back its rules, used rules and streaks', () => {
+  page = bootPage({
+    storage: {
+      'ehttt': { key: 'egypt-hindu', chaos: true },
+      'ehttt-game': {
+        board: ['egypt', null, null, null, 'hindu', null, null, null, null],
+        currentPlayer: 'egypt', scores: { egypt: 2, hindu: 0, draws: 0 }, cosmicAngle: 0,
+        moveLog: [], lastPlacedCell: 4,
+        streaks: { egypt: 2, hindu: 0 }, lastWinner: 'egypt',
+        chaosRules: ['smite', 'holy-ground'],
+        chaosState: { holyCell: 8, smiteUsed: true, lagActive: true },
+        chaosLog: [{ icon: '⚡', name: 'Smite' }],
+      },
+    },
+  });
+  page.clock.tick(CHAOS_MS);
+  page.$('restore-yes').click();
+
+  expect(page.w.eval('activeChaosRules.map(r => r.id).sort()')).toEqual(['holy-ground', 'smite']);
+  expect(page.t.chaosState.holyCell).toBe(8);
+  expect(page.t.chaosState.lagActive).toBe(false);
+  expect(page.$('chaos-chip-smite').classList.contains('used')).toBe(true);
+  expect(page.$('chaos-chip-holy-ground').classList.contains('used')).toBe(false);
+  expect(page.t.state.streaks.egypt).toBe(2);
+  expect(page.$('streak-egypt').classList.contains('visible')).toBe(true);
+  page.clickCell(8);                       // still Holy Ground
+  expect(page.t.state.board[8]).toBeNull();
+});

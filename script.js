@@ -130,6 +130,11 @@ function autoSaveGame() {
       moveLog:       moveLog,
       gameLog:       gameLog,
       lastPlacedCell: lastPlacedCell,
+      streaks:       gameState.streaks,
+      lastWinner:    gameState.lastWinner,
+      chaosRules:    chaosMode ? activeChaosRules.map(r => r.id) : [],
+      chaosState:    chaosState,
+      chaosLog:      chaosLog,
     }));
   } catch(_) {}
 }
@@ -173,7 +178,11 @@ function applyRestore() {
     // Older saves have no replay log; replay then can't line up with the moves.
     gameLog       = Array.isArray(g.gameLog) && g.gameLog.length === moveLog.length ? g.gameLog : [];
     lastPlacedCell = g.lastPlacedCell != null ? g.lastPlacedCell : -1;
+    gameState.streaks    = g.streaks || { egypt: 0, hindu: 0 };
+    gameState.lastWinner = g.lastWinner || null;
     gameState.gameOver = false;
+    restoreChaos(g);
+    updateBoardTransform();   // cosmic angle (+ mirror, if restored)
     clearGameSave();
     scoreEgypt.textContent = gameState.scores.egypt;
     scoreHindu.textContent = gameState.scores.hindu;
@@ -185,6 +194,7 @@ function applyRestore() {
     updateBoardColor();
     updateEvalBar(gameState.currentPlayer === HINDU);
     updateSessionRate();
+    updateStreakBadges();
     statusEl.className   = `status-text ${gameState.currentPlayer}-msg`;
     statusEl.textContent = LABELS[gameState.currentPlayer];
     showChaosEvent('♻ Game restored!', 2200);
@@ -192,6 +202,25 @@ function applyRestore() {
     scheduleAI();
     if (!spectatorMode && (!aiMode || gameState.currentPlayer === EGYPT)) startTimer();
   } catch(_) {}
+}
+
+// Bring back the saved game's chaos rules (only if Chaos mode is still on).
+const CHAOS_USED_FLAGS = {
+  'wild-turn': 'wildUsed', 'swap-souls': 'swapUsed', smite: 'smiteUsed',
+  blessing: 'blessingUsed', mirror: 'mirrorUsed', 'solar-flare': 'solarUsed',
+  'divine-lag': 'lagUsed', treachery: 'treacheryUsed',
+};
+function restoreChaos(g) {
+  if (!chaosMode || !Array.isArray(g.chaosRules) || !g.chaosRules.length) return;
+  const rules = CHAOS_RULES.filter(r => g.chaosRules.includes(r.id));
+  if (!rules.length) return;
+  activeChaosRules = rules;
+  // A Divine Lag freeze has no timer left to end it after a reload.
+  chaosState = { ...chaosState, ...(g.chaosState || {}), lagActive: false };
+  chaosLog   = Array.isArray(g.chaosLog) ? g.chaosLog : [];
+  updateChaosBar();
+  Object.entries(CHAOS_USED_FLAGS).forEach(([id, flag]) => { if (chaosState[flag]) markChaosUsed(id); });
+  if (chaosLog.some(e => e.name === 'Cursed Skip') && !chaosState.skipNext) markChaosUsed('cursed-skip');
 }
 
 /* ─────────────────────────────────────────────
