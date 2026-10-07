@@ -7,7 +7,7 @@
 
 [![CI](https://github.com/HighviewOne/EgyptianHinduTicTacToe/actions/workflows/ci.yml/badge.svg)](https://github.com/HighviewOne/EgyptianHinduTicTacToe/actions/workflows/ci.yml)
 [![Deploy](https://github.com/HighviewOne/EgyptianHinduTicTacToe/actions/workflows/pages.yml/badge.svg)](https://github.com/HighviewOne/EgyptianHinduTicTacToe/actions/workflows/pages.yml)
-[![Tests](https://img.shields.io/badge/Tests-68%20passing-brightgreen?style=flat-square)](game.dom.test.js)
+[![Tests](https://img.shields.io/badge/Tests-77%20passing-brightgreen?style=flat-square)](game.dom.test.js)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
 
 ![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat-square&logo=html5&logoColor=white)
@@ -52,8 +52,9 @@ A fully-featured browser Tic-Tac-Toe game with **cinematic cultural themes**, a 
 # No build step needed — open directly in any modern browser
 open index.html
 
-# Run the tests (first time: npm install)
+# Run the tests and the linter (first time: npm install)
 npm test
+npm run lint
 ```
 
 Clone or download the repo, open `index.html`, and play. That's it.
@@ -240,7 +241,7 @@ Each theme has its own modal scale, melody pattern, step tempo, and drone freque
 | Persistence | `localStorage` |
 | Offline | Service Worker (network-first, cache fallback — always fresh online, playable offline) |
 | Install | Web App Manifest (PWA) |
-| Testing | Jest (unit tests) + jsdom with fake timers (integration tests that boot the real page) — 68 tests |
+| Testing | Jest (unit tests) + jsdom with fake timers (integration tests that boot the real page) — 77 tests, ESLint |
 | CI/CD | GitHub Actions → GitHub Pages |
 
 ---
@@ -286,9 +287,10 @@ cd EgyptianHinduTicTacToe
 # Play (macOS)
 open index.html
 
-# Run the tests
+# Run the tests and the linter
 npm install
 npm test
+npm run lint
 ```
 
 ---
