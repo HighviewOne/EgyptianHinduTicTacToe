@@ -532,3 +532,45 @@ test('Undoing a win also cancels its pending rank-up / milestone toasts', () => 
   for (let t = 0; t < 4000; t += 100) { page.clock.tick(100); seen.push(page.$('chaos-event').textContent); }
   expect(seen.some(x => /RANKS UP|Victories/.test(x))).toBe(false);
 });
+
+test('Custom names survive a second reload and a theme switch, and show everywhere', () => {
+  page = bootPage({ storage: { 'ehttt': { key: 'egypt-hindu', name1: 'Cleo' } } });
+  // Prefs as saved after the first reload
+  expect(JSON.parse(page.w.localStorage.getItem('ehttt')).name1).toBe('Cleo');
+  expect(page.$('intro-name1').textContent).toBe('CLEO');
+  page.clock.tick(INTRO_MS);
+
+  page.w.document.querySelector('.theme-btn[data-theme="classic"]').click();
+  page.clock.tick(INTRO_MS);
+  expect(page.$('name-egypt').textContent).toBe('Cleo');
+  expect(page.$('status').textContent).toMatch(/^Cleo's turn/);
+  expect(page.$('name-hindu').textContent).toBe(page.w.eval("THEMES.classic.players.hindu.name"));
+
+  page.$('btn-stats').click();
+  expect(page.$('stats-grid').textContent).toContain('CLEO WINS');
+});
+
+test('Custom names are escaped where HTML is built', () => {
+  page = bootPage({ storage: { 'ehttt': { key: 'egypt-hindu', mode: 'hard', name2: '<img src=x>' } } });
+  page.clock.tick(INTRO_MS);
+  page.$('btn-stats').click();
+  expect(page.$('stats-grid').querySelector('img')).toBeNull();
+  expect(page.$('stats-grid').textContent).toContain('<IMG SRC=X> WINS');
+
+  page.clickCell(0);                       // AI "ponders" with the custom name
+  expect(page.$('status').querySelector('img')).toBeNull();
+  expect(page.$('status').textContent).toMatch(/^<img src=x> ponders/);
+});
+
+test('Renaming to the theme name (or blank) goes back to the theme default', () => {
+  page = bootPage();
+  page.clock.tick(INTRO_MS);
+  const el = page.$('name-egypt');
+  el.textContent = '  Ramses  ';
+  el.dispatchEvent(new page.w.FocusEvent('blur'));
+  expect(el.textContent).toBe('Ramses');
+  el.textContent = '';
+  el.dispatchEvent(new page.w.FocusEvent('blur'));
+  expect(el.textContent).toBe('Egypt');
+  expect(JSON.parse(page.w.localStorage.getItem('ehttt')).name1).toBe('');
+});

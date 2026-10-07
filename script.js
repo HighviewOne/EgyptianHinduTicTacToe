@@ -281,10 +281,10 @@ function updateAllTimeStats(outcome) {
     const newR1 = getRank(s.egypt || 0);
     const newR2 = getRank(s.hindu || 0);
     if (newR1.label !== oldR1 && s.egypt > 0) {
-      roundTimeout(() => showChaosEvent(`⬆️ ${currentTheme.players.egypt.name} RANKS UP: ${newR1.label}!`, 3200), 2000);
+      roundTimeout(() => showChaosEvent(`⬆️ ${playerName(EGYPT)} RANKS UP: ${newR1.label}!`, 3200), 2000);
     }
     if (newR2.label !== oldR2 && s.hindu > 0) {
-      roundTimeout(() => showChaosEvent(`⬆️ ${currentTheme.players.hindu.name} RANKS UP: ${newR2.label}!`, 3200), 2000);
+      roundTimeout(() => showChaosEvent(`⬆️ ${playerName(HINDU)} RANKS UP: ${newR2.label}!`, 3200), 2000);
     }
   }
   updateRankBadges();
@@ -309,8 +309,8 @@ function showStatsModal() {
   // Clear previously-inserted dynamic sections to prevent duplication on re-open
   document.querySelectorAll('.recent-games, .heat-section, .theme-stats-section').forEach(el => el.remove());
   const s  = loadAllTimeStats();
-  const p1 = currentTheme.players.egypt;
-  const p2 = currentTheme.players.hindu;
+  const n1 = escapeHtml(playerName(EGYPT)).toUpperCase();
+  const n2 = escapeHtml(playerName(HINDU)).toUpperCase();
   const winRate  = s.gamesPlayed
     ? Math.round(((s.egypt || 0) / s.gamesPlayed) * 100) : 0;
   const avgMoves = s.gamesPlayed && s.totalMoves
@@ -321,10 +321,10 @@ function showStatsModal() {
   document.getElementById('stats-grid').innerHTML = `
     <div class="stat-card"><div class="stat-val">${s.gamesPlayed || 0}</div><div class="stat-lbl">GAMES PLAYED</div></div>
     <div class="stat-card"><div class="stat-val">${s.draws || 0}</div><div class="stat-lbl">DRAWS</div></div>
-    <div class="stat-card"><div class="stat-val">${s.egypt || 0}</div><div class="stat-lbl">${p1.name.toUpperCase()} WINS</div></div>
-    <div class="stat-card"><div class="stat-val">${s.hindu || 0}</div><div class="stat-lbl">${p2.name.toUpperCase()} WINS</div></div>
+    <div class="stat-card"><div class="stat-val">${s.egypt || 0}</div><div class="stat-lbl">${n1} WINS</div></div>
+    <div class="stat-card"><div class="stat-val">${s.hindu || 0}</div><div class="stat-lbl">${n2} WINS</div></div>
     <div class="stat-card"><div class="stat-val">${s.longestStreak || 0}</div><div class="stat-lbl">BEST STREAK</div></div>
-    <div class="stat-card"><div class="stat-val">${winRate}%</div><div class="stat-lbl">${p1.name.toUpperCase()} WIN RATE</div></div>
+    <div class="stat-card"><div class="stat-val">${winRate}%</div><div class="stat-lbl">${n1} WIN RATE</div></div>
     <div class="stat-card"><div class="stat-val">${avgMoves}</div><div class="stat-lbl">AVG MOVES</div></div>
     <div class="stat-card"><div class="stat-val">${favCell}</div><div class="stat-lbl">FAV CELL</div></div>
   `;
@@ -333,7 +333,7 @@ function showStatsModal() {
   if (s.recentGames && s.recentGames.length) {
     const dots = s.recentGames.map(g => {
       const color = g === EGYPT ? 'var(--egypt-gold)' : g === HINDU ? 'var(--hindu-saffron)' : 'rgba(255,255,255,.35)';
-      const label = g === EGYPT ? p1.name : g === HINDU ? p2.name : 'Draw';
+      const label = g === EGYPT ? escapeHtml(playerName(EGYPT)) : g === HINDU ? escapeHtml(playerName(HINDU)) : 'Draw';
       return `<span class="recent-dot" style="background:${color}" title="${label}"></span>`;
     }).join('');
     afterGrid.insertAdjacentHTML('afterend',
@@ -485,9 +485,38 @@ function updateStreakBadges() {
 /* ─────────────────────────────────────────────
    Editable player names
 ───────────────────────────────────────────── */
+// Names the players typed in; '' = use the theme's name. Kept across theme
+// changes. Everything that shows a player's name goes through playerName().
+const customNames = { egypt: '', hindu: '' };
+function playerName(player) {
+  return customNames[player] || currentTheme.players[player].name;
+}
+function setCustomName(player, raw) {
+  const name = (raw || '').replace(/\s+/g, ' ').trim().slice(0, 20);
+  customNames[player] = name && name !== currentTheme.players[player].name ? name : '';
+  const el = document.getElementById(`name-${player}`);
+  if (el) el.textContent = playerName(player);
+  setPlayerLabel(player);
+}
+
+// Custom names can contain anything, so escape them before using innerHTML.
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+}
+
+// "<name> ponders..." status while an AI is thinking
+function showPondering(player) {
+  statusEl.className = `status-text ${player}-msg`;
+  statusEl.innerHTML = `${escapeHtml(playerName(player))} ponders<span class="thinking-dots"><span>.</span><span>.</span><span>.</span></span>`;
+}
+
 // Turn label uses the player's (possibly custom) name.
-function setPlayerLabel(player, name) {
-  LABELS[player] = `${name}'s turn — ${currentTheme.players[player].label.split('—')[1]?.trim() || ''}`;
+function setPlayerLabel(player) {
+  const theme = currentTheme.players[player].label;
+  LABELS[player] = customNames[player]
+    ? `${customNames[player]}'s turn — ${theme.split('—')[1]?.trim() || ''}`
+    : theme;
   // Refresh status bar if it's currently this player's turn
   if (!gameState.gameOver && gameState.currentPlayer === player) {
     statusEl.textContent = LABELS[player];
@@ -503,10 +532,7 @@ function initEditableNames() {
       // Prevent pasting rich text or line breaks
     });
     el.addEventListener('blur', () => {
-      const raw  = el.textContent.replace(/\n/g, '').trim().slice(0, 20);
-      const name = raw || currentTheme.players[player].name;
-      el.textContent = name;
-      setPlayerLabel(player, name);
+      setCustomName(player, el.textContent);
       savePrefs();
     });
   });
@@ -547,13 +573,13 @@ function showIntro() {
   const begin   = document.getElementById('intro-begin');
 
   document.getElementById('intro-sym1').textContent  = currentTheme.players.egypt.symbol;
-  document.getElementById('intro-name1').textContent = currentTheme.players.egypt.name.toUpperCase();
+  document.getElementById('intro-name1').textContent = playerName(EGYPT).toUpperCase();
   document.getElementById('intro-tag1').textContent  = currentTheme.players.egypt.intro;
   document.getElementById('intro-sym1').style.color  = currentTheme.players.egypt.primary;
   document.getElementById('intro-name1').style.color = currentTheme.players.egypt.primary;
 
   document.getElementById('intro-sym2').textContent  = currentTheme.players.hindu.symbol;
-  document.getElementById('intro-name2').textContent = currentTheme.players.hindu.name.toUpperCase();
+  document.getElementById('intro-name2').textContent = playerName(HINDU).toUpperCase();
   document.getElementById('intro-tag2').textContent  = currentTheme.players.hindu.intro;
   document.getElementById('intro-sym2').style.color  = currentTheme.players.hindu.primary;
   document.getElementById('intro-name2').style.color = currentTheme.players.hindu.primary;
@@ -632,7 +658,7 @@ function renderBoard(winCells = []) {
     const _pos = POS_LABELS[i] || `${i + 1}`;
     const _fogged = val && fogMode && !gameState.gameOver && val !== gameState.currentPlayer;
     cell.setAttribute('aria-label',
-      !val ? `${_pos}, empty` : _fogged ? `${_pos}, hidden piece` : `${_pos}, ${currentTheme.players[val].name}`);
+      !val ? `${_pos}, empty` : _fogged ? `${_pos}, hidden piece` : `${_pos}, ${playerName(val)}`);
     if (val) {
       cell.classList.add('taken', `${val}-cell`);
       const _fogHide = fogMode && !gameState.gameOver
@@ -807,7 +833,7 @@ function showWinSeal(winner) {
   const cardEl   = seal.querySelector('.win-seal-card');
   const btnEl    = document.getElementById('win-seal-btn');
   if (stampEl)  { stampEl.textContent = isDraw ? '⚖' : (p.symbol || '?'); stampEl.style.color = ink; stampEl.style.borderColor = ink; }
-  if (cryEl)    { cryEl.textContent = isDraw ? 'A SACRED DRAW' : (p.winCry || p.name + ' WINS!'); cryEl.style.color = ink; }
+  if (cryEl)    { cryEl.textContent = isDraw ? 'A SACRED DRAW' : (p.winCry || playerName(winner).toUpperCase() + ' WINS!'); cryEl.style.color = ink; }
   if (lineEl)   lineEl.textContent = isDraw ? 'Both armies retreat with honor intact.' : (p.winLine || (p.winMsgs ? p.winMsgs[0].replace(/^🏆\s*/,'') : ''));
   if (cardEl)   cardEl.style.borderColor = ink;
   if (btnEl)    { btnEl.style.borderColor = ink; btnEl.style.color = ink; }
@@ -941,9 +967,7 @@ function scheduleSpectatorAI() {
       aiThinking || introShowing || chaosShowing || chaosState.lagActive) return;
   aiThinking = true;
   boardEl.classList.add('ai-thinking');
-  const p = currentTheme.players.egypt;
-  statusEl.className = 'status-text egypt-msg';
-  statusEl.innerHTML = `${p.name} ponders<span class="thinking-dots"><span>.</span><span>.</span><span>.</span></span>`;
+  showPondering(EGYPT);
   const _speedScale = spectatorDelay / 2800;
   const delay = (480 + Math.random() * 520) * _speedScale;
   const snapBoard = rulesBoard();
@@ -1675,7 +1699,7 @@ function shareResult() {
   // Emoji board grid (Wordle-style)
   const sym = v => v === EGYPT ? p1.symbol : v === HINDU ? p2.symbol : '·';
   const gridRows = [0, 3, 6].map(r => [0,1,2].map(c => sym(gameState.board[r+c])).join(' '));
-  const text = `${p1.symbol} ${p1.name} ${egypt}–${hindu} ${p2.name} ${p2.symbol}${drawPart}\n${gridRows.join('\n')}\nEgyptian & Hindu Tic-Tac-Toe`;
+  const text = `${p1.symbol} ${playerName(EGYPT)} ${egypt}–${hindu} ${playerName(HINDU)} ${p2.symbol}${drawPart}\n${gridRows.join('\n')}\nEgyptian & Hindu Tic-Tac-Toe`;
   const btn  = document.getElementById('btn-share');
   if (navigator.share) {
     navigator.share({ title: 'Ancient Tic-Tac-Toe', text }).catch(() => {});
@@ -1711,18 +1735,18 @@ function applyTheme(key) {
   spawnBgParticles();
 
   document.querySelector('#card-egypt .player-symbol').textContent = currentTheme.players.egypt.symbol;
-  document.getElementById('name-egypt').textContent                = currentTheme.players.egypt.name;
+  document.getElementById('name-egypt').textContent                = playerName(EGYPT);
   document.querySelector('#card-egypt .player-title').textContent  = currentTheme.players.egypt.title;
   document.querySelector('#card-egypt .player-lore').textContent   = currentTheme.players.egypt.lore;
   document.querySelector('#card-hindu .player-symbol').textContent = currentTheme.players.hindu.symbol;
-  document.getElementById('name-hindu').textContent                = currentTheme.players.hindu.name;
+  document.getElementById('name-hindu').textContent                = playerName(HINDU);
   document.querySelector('#card-hindu .player-title').textContent  = currentTheme.players.hindu.title;
   document.querySelector('#card-hindu .player-lore').textContent   = currentTheme.players.hindu.lore;
 
   SYMBOLS.egypt = currentTheme.players.egypt.symbol;
   SYMBOLS.hindu = currentTheme.players.hindu.symbol;
-  LABELS.egypt  = currentTheme.players.egypt.label;
-  LABELS.hindu  = currentTheme.players.hindu.label;
+  setPlayerLabel(EGYPT);
+  setPlayerLabel(HINDU);
 
   document.querySelectorAll('.theme-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.theme === key);
@@ -1874,7 +1898,7 @@ function showMatchVictory(winner) {
   const p = currentTheme.players[winner];
   const winsNeeded = Math.ceil(matchTarget / 2);
   document.getElementById('mv-symbol').textContent  = p.symbol;
-  document.getElementById('mv-title').textContent   = `${p.name} Conquers the Match!`;
+  document.getElementById('mv-title').textContent   = `${playerName(winner)} Conquers the Match!`;
   document.getElementById('mv-subtitle').textContent =
     `First to ${winsNeeded} — Best of ${matchTarget} complete`;
   document.getElementById('match-victory').classList.add('visible');
@@ -1910,7 +1934,7 @@ function handleClick(i, fromAI = false) {
   if (chaosMode && chaosState.skipNext === currentPlayer) {
     chaosState.skipNext = null;
     markChaosUsed('cursed-skip');
-    showChaosEvent(`💀 CURSED SKIP! ${currentTheme.players[currentPlayer].name}'s turn is OBLITERATED by ancient forces!`);
+    showChaosEvent(`💀 CURSED SKIP! ${playerName(currentPlayer)}'s turn is OBLITERATED by ancient forces!`);
     gameState.currentPlayer = getNextPlayer(currentPlayer);
     statusEl.className   = `status-text ${gameState.currentPlayer}-msg`;
     statusEl.textContent = LABELS[gameState.currentPlayer];
@@ -1970,7 +1994,7 @@ function handleClick(i, fromAI = false) {
       if (chaosState.ghostCell === target) chaosState.ghostCell = -1;
       sfxChaos('smite');
       chaosLog.push({ icon: '⚡', name: 'Smite' });
-      showChaosEvent(`⚡ SMITE! A divine bolt obliterates ${currentTheme.players[opp].name}'s piece!`);
+      showChaosEvent(`⚡ SMITE! A divine bolt obliterates ${playerName(opp)}'s piece!`);
       triggerSolarFlare();
     }
   }
@@ -2185,8 +2209,8 @@ function handleClick(i, fromAI = false) {
       const streak = gameState.streaks[w];
       if (streak >= 3) {
         const fire = streak === 3
-          ? `🔥 ${currentTheme.players[w].name} IS ON FIRE! THREE IN A ROW!`
-          : `🔥 ${streak} IN A ROW! ${currentTheme.players[w].name} IS SIMPLY UNSTOPPABLE!`;
+          ? `🔥 ${playerName(w)} IS ON FIRE! THREE IN A ROW!`
+          : `🔥 ${streak} IN A ROW! ${playerName(w)} IS SIMPLY UNSTOPPABLE!`;
         roundTimeout(() => showChaosEvent(fire, 3000), 900);
       }
 
@@ -2248,7 +2272,7 @@ function handleClick(i, fromAI = false) {
       markChaosUsed('blessing');
       sfxChaos('blessing');
       chaosLog.push({ icon: '✨', name: 'Blessing of Twofold' });
-      showChaosEvent(`✨ BLESSING OF TWOFOLD! ${currentTheme.players[currentPlayer].name} PLAYS AGAIN!`);
+      showChaosEvent(`✨ BLESSING OF TWOFOLD! ${playerName(currentPlayer)} PLAYS AGAIN!`);
     }
 
     // ── CHAOS: Cursed Skip (schedule skip for opponent's next turn) ───
@@ -2258,7 +2282,7 @@ function handleClick(i, fromAI = false) {
       chaosState.skipNext = toSkip;
       sfxChaos('cursed-skip');
       chaosLog.push({ icon: '💀', name: 'Cursed Skip' });
-      showChaosEvent(`💀 CURSED SKIP incoming! ${currentTheme.players[toSkip].name}'s NEXT turn will vanish into darkness!`);
+      showChaosEvent(`💀 CURSED SKIP incoming! ${playerName(toSkip)}'s NEXT turn will vanish into darkness!`);
     }
 
     // ── Quip (15 % chance) ────────────────────────────────────────────
@@ -2436,8 +2460,8 @@ function savePrefs() {
       chaos:      chaosMode,
       fog:        fogMode,
       match:      matchTarget,
-      name1:      document.getElementById('name-egypt').textContent.trim() || '',
-      name2:      document.getElementById('name-hindu').textContent.trim() || '',
+      name1:      customNames.egypt,
+      name2:      customNames.hindu,
       timerSecs:  timerSeconds,
       volSfx:     parseFloat(document.getElementById('vol-slider').value) / 100,
       volMusic:   parseFloat(document.getElementById('vol-music').value)  / 100,
@@ -2464,8 +2488,14 @@ function loadPrefs() {
       });
     }
 
-    // Apply theme — this calls resetScores → newRound (→ startChaos if chaosMode) + showIntro
+    // Custom names before applyTheme, which shows them and re-saves prefs.
+    // (Older saves stored the theme's own name here; that's not a custom name.)
     const key = p.key && THEMES[p.key] ? p.key : 'egypt-hindu';
+    const themeName = pl => THEMES[key].players[pl].name;
+    if (p.name1 && p.name1 !== themeName(EGYPT)) customNames.egypt = String(p.name1).slice(0, 20);
+    if (p.name2 && p.name2 !== themeName(HINDU)) customNames.hindu = String(p.name2).slice(0, 20);
+
+    // Apply theme — this calls resetScores → newRound (→ startChaos if chaosMode) + showIntro
     applyTheme(key);
 
     // Restore AI mode without re-triggering a full reset
@@ -2478,8 +2508,6 @@ function loadPrefs() {
         p.mode === 'hard' ? 'Ancient AI' : p.mode === 'medium' ? 'Medium AI' : 'Easy AI';
     }
     // Restore custom player names (applied after applyTheme which sets defaults)
-    if (p.name1) { const el = document.getElementById('name-egypt'); if (el) el.textContent = p.name1; setPlayerLabel(EGYPT, p.name1); }
-    if (p.name2) { const el = document.getElementById('name-hindu'); if (el) el.textContent = p.name2; setPlayerLabel(HINDU, p.name2); }
     // Restore audio levels
     if (p.volSfx != null) {
       setVolume(p.volSfx);
@@ -2771,7 +2799,7 @@ function copyMoves() {
   const lines = moveLog.map(m =>
     `${String(m.turn).padStart(2)}. ${SYMBOLS[m.player] || m.player}  ${m.pos.padEnd(2)}  ${qIcon[m.quality] || '·'}`
   );
-  const header = `${currentTheme.players.egypt.name} vs ${currentTheme.players.hindu.name}`;
+  const header = `${playerName(EGYPT)} vs ${playerName(HINDU)}`;
   const text   = `${header}\n${lines.join('\n')}`;
   const done = () => {
     if (btn) { btn.textContent = '✓ Copied!'; setTimeout(() => btn.textContent = '📋 Moves', 1800); }

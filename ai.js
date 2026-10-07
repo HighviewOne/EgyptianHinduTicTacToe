@@ -108,9 +108,7 @@ function scheduleAI() {
       introShowing || chaosShowing || chaosState.lagActive) return;
   aiThinking = true;
   boardEl.classList.add('ai-thinking');
-  const p = currentTheme.players.hindu;
-  statusEl.className = 'status-text hindu-msg';
-  statusEl.innerHTML = `${p.name} ponders<span class="thinking-dots"><span>.</span><span>.</span><span>.</span></span>`;
+  showPondering(HINDU);
   const delay = aiMode === 'easy' ? 400 + Math.random() * 400
                                   : 500 + Math.random() * 300;
   aiTimer = setTimeout(() => {
