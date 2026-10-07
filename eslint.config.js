@@ -7,7 +7,7 @@ const globals = require('globals');
 // The game is plain <script> files sharing one global scope, in this order.
 // Each file may use what any of them declares at top level, so collect those
 // names and declare them as globals for all of them.
-const GAME_FILES = ['gameLogic.js', 'data.js', 'audio.js', 'ai.js', 'script.js'];
+const GAME_FILES = [...fs.readFileSync('index.html', 'utf8').matchAll(/<script src="([^"]+)"/g)].map(m => m[1]);
 const shared = {};
 for (const f of GAME_FILES) {
   const src = fs.readFileSync(f, 'utf8');

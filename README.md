@@ -7,7 +7,7 @@
 
 [![CI](https://github.com/HighviewOne/EgyptianHinduTicTacToe/actions/workflows/ci.yml/badge.svg)](https://github.com/HighviewOne/EgyptianHinduTicTacToe/actions/workflows/ci.yml)
 [![Deploy](https://github.com/HighviewOne/EgyptianHinduTicTacToe/actions/workflows/pages.yml/badge.svg)](https://github.com/HighviewOne/EgyptianHinduTicTacToe/actions/workflows/pages.yml)
-[![Tests](https://img.shields.io/badge/Tests-77%20passing-brightgreen?style=flat-square)](game.dom.test.js)
+[![Tests](https://img.shields.io/badge/Tests-78%20passing-brightgreen?style=flat-square)](game.dom.test.js)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
 
 ![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat-square&logo=html5&logoColor=white)
@@ -241,7 +241,7 @@ Each theme has its own modal scale, melody pattern, step tempo, and drone freque
 | Persistence | `localStorage` |
 | Offline | Service Worker (network-first, cache fallback — always fresh online, playable offline) |
 | Install | Web App Manifest (PWA) |
-| Testing | Jest (unit tests) + jsdom with fake timers (integration tests that boot the real page) — 77 tests, ESLint |
+| Testing | Jest (unit tests) + jsdom with fake timers (integration tests that boot the real page) — 78 tests, ESLint |
 | CI/CD | GitHub Actions → GitHub Pages |
 
 ---
@@ -256,8 +256,14 @@ icon.svg            app icon
 styles.css          CSS custom-property theming system (~1 800 lines)
 data.js             all static data: themes, chaos rules, quips, achievements
 audio.js            Web Audio API — sound effects + procedural background music
-ai.js               minimax with alpha-beta pruning + mode management
-script.js           game loop, UI, chaos engine, events, localStorage
+ai.js               minimax (depth-aware, alpha-beta pruning) + mode management
+chaos.js            Chaos mode: rule state, picking/config, rules bar, overlay
+stats.js            all-time stats, ranks, achievements, move log, analysis
+board.js            board drawing: cells, grid/win lines, seal, eval bar, hint, replay
+themes.js           apply/generate themes, intro, lore popup, papyrus ornaments
+script.js           game state, move handling (handleClick), rounds, undo,
+                    save/restore, prefs, keyboard/touch input, startup
+eslint.config.js    lint config (all game files share one global scope)
 gameLogic.js        pure game logic — board, win detection, Holy Ground blocking
 gameLogic.test.js   unit tests — game logic and AI move choice
 game.dom.test.js    integration tests — boots index.html in jsdom with fake timers
@@ -302,6 +308,7 @@ A few conventions keep the game's many timers and chaos rules from interfering w
 - **Round-scoped timers** — any delayed action that belongs to the current round (a toast, a status restore, the win seal…) must use `roundTimeout(fn, ms)`, not `setTimeout`. `newRound()` and `undo()` cancel them all, so nothing fires into the next round. Plain `setTimeout` is only for cosmetic cleanup that must always run, like removing an animation class.
 - **AI moves** — `scheduleAI()` / `scheduleSpectatorAI()` store their pending move in `aiTimer`; call `cancelAI()` whenever the board is replaced.
 - **Holy Ground** — anything that picks or checks a move (AI, hints, move timer, win/draw check) should use `rulesBoard()`, which marks the forbidden cell as unplayable.
+- **Adding a script file** — add its `<script>` tag to `index.html` (before `script.js`, which runs startup) and to `ASSETS` in `sw.js`. The tests, linter and deploy read the list from `index.html`; a test checks `sw.js`.
 - **Tests** — `game.dom.test.js` loads the real page, so a new bug can usually be reproduced there first: drive it with `clickCell`, `key` and `clock.tick`, and control randomness with `setRandom`.
 
 ---

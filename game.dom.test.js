@@ -11,7 +11,9 @@ const { JSDOM, VirtualConsole } = require('jsdom');
 const FakeTimers = require('@sinonjs/fake-timers');
 
 const ROOT = __dirname;
-const SCRIPTS = ['gameLogic.js', 'data.js', 'audio.js', 'ai.js', 'script.js'];
+// Same files, same order as the page loads them
+const SCRIPTS = [...fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8')
+  .matchAll(/<script src="([^"]+)"/g)].map(m => m[1]);
 
 // Universal no-op stub: any property access or call returns another stub.
 // Stands in for AudioContext and canvas 2D contexts, which jsdom lacks.
@@ -624,4 +626,10 @@ test('Swipes on the board: diagonal drags and short downward drags do nothing', 
   expect(music()).toBe(!before);
   swipe(-120, 5);                          // swipe left → undo
   expect(page.t.state.board[0]).toBeNull();
+});
+
+test('Service worker caches every script the page loads', () => {
+  page = bootPage();
+  const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
+  SCRIPTS.forEach(f => expect(sw).toContain(`'${f}'`));
 });

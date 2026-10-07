@@ -3,7 +3,7 @@
    Online players always get the latest deploy;
    the cache keeps the game playable offline.
 ───────────────────────────────────────────── */
-const CACHE  = 'ehttt-v2';
+const CACHE  = 'ehttt-v3';
 const ASSETS = [
   '.',
   'index.html',
@@ -12,6 +12,10 @@ const ASSETS = [
   'data.js',
   'audio.js',
   'ai.js',
+  'chaos.js',
+  'stats.js',
+  'board.js',
+  'themes.js',
   'script.js',
   'icon.svg',
   'manifest.json',

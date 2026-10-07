@@ -39,8 +39,9 @@ jobs:
       # Publish only the files the game needs (not tests, docs or the demo GIF)
       - run: |
           mkdir _site
-          cp index.html styles.css gameLogic.js data.js audio.js ai.js script.js \
-             sw.js icon.svg manifest.json _site/
+          cp index.html styles.css sw.js icon.svg manifest.json _site/
+          # every script the page loads
+          grep -o '<script src="[^"]*"' index.html | cut -d'"' -f2 | xargs -I{} cp {} _site/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
