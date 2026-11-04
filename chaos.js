@@ -18,7 +18,7 @@ let chaosState       = {
   wildUsed: false, swapUsed: false, smiteUsed: false,
   blessingUsed: false, skipUsed: false, skipNext: null,
   mirrorUsed: false, mirror: false,
-  solarUsed: false, lagUsed: false, lagActive: false,
+  solarUsed: false,
 };
 
 /* ─────────────────────────────────────────────
@@ -53,9 +53,8 @@ function initChaosState() {
     wildUsed: false, swapUsed: false, smiteUsed: false,
     blessingUsed: false, skipUsed: false, skipNext: null,
     mirrorUsed: false, mirror: false,
-    solarUsed: false, lagUsed: false, lagActive: false,
+    solarUsed: false,
     holyCell: chaosHas('holy-ground') ? randInt(9) : -1,
-    treacheryUsed: false,
   };
 }
 

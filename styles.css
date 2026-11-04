@@ -711,8 +711,6 @@ header { width: 100%; max-width: 1240px; }
 /* fog of war */
 .cell.fog-hidden { color: rgba(40,20,0,0.25) !important; font-size: 1.4rem !important; }
 
-/* phantom veil */
-.board.phantom-veil .cell.taken { color: transparent !important; transition: color .1s; }
 
 /* ghost cell */
 .cell.ghost-cell {

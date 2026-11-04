@@ -99,26 +99,6 @@ test('Holy Ground: AI does not stall when its preferred cell is forbidden', () =
   expect(page.t.state.currentPlayer).toBe('egypt');
 });
 
-test('Divine Lag: AI moves once the lag ends', () => {
-  page = bootPage();
-  page.clock.tick(INTRO_MS);
-  page.setRandom(0.9);
-  page.t.setChaosEnabled(['divine-lag']);
-  page.$('mode-hard').click();
-  page.$('btn-chaos').click();
-  page.clock.tick(CHAOS_MS);
-
-  page.setRandom(0.1);                     // < 0.22 → Divine Lag fires on this move
-  page.clickCell(0);
-  expect(page.t.chaosState.lagActive).toBe(true);
-  page.clock.tick(1000);
-  expect(page.pieces('hindu')).toBe(0);    // still frozen
-  page.clock.tick(3000);
-
-  expect(page.pieces('hindu')).toBe(1);
-  expect(page.t.state.currentPlayer).toBe('egypt');
-});
-
 test('Demo mode + chaos: Egypt still moves after the chaos overlay closes', () => {
   page = bootPage();
   page.clock.tick(INTRO_MS);
@@ -586,8 +566,8 @@ test('Restoring a chaos game brings back its rules, used rules and streaks', () 
         currentPlayer: 'egypt', scores: { egypt: 2, hindu: 0, draws: 0 }, cosmicAngle: 0,
         moveLog: [], lastPlacedCell: 4,
         streaks: { egypt: 2, hindu: 0 }, lastWinner: 'egypt',
-        chaosRules: ['smite', 'holy-ground'],
-        chaosState: { holyCell: 8, smiteUsed: true, lagActive: true },
+        chaosRules: ['smite', 'holy-ground', 'treachery'],   // treachery was removed: ignored
+        chaosState: { holyCell: 8, smiteUsed: true },
         chaosLog: [{ icon: '⚡', name: 'Smite' }],
       },
     },
@@ -597,7 +577,6 @@ test('Restoring a chaos game brings back its rules, used rules and streaks', () 
 
   expect(page.w.eval('activeChaosRules.map(r => r.id).sort()')).toEqual(['holy-ground', 'smite']);
   expect(page.t.chaosState.holyCell).toBe(8);
-  expect(page.t.chaosState.lagActive).toBe(false);
   expect(page.$('chaos-chip-smite').classList.contains('used')).toBe(true);
   expect(page.$('chaos-chip-holy-ground').classList.contains('used')).toBe(false);
   expect(page.t.state.streaks.egypt).toBe(2);
