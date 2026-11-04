@@ -292,20 +292,6 @@ function updateStreakBadges() {
 }
 
 /* ─────────────────────────────────────────────
-   Move history log
-───────────────────────────────────────────── */
-function updateMoveLog() {
-  const body = document.getElementById('move-log-body');
-  if (!body) return;
-  if (!moveLog.length) { body.innerHTML = '<div class="log-empty">No moves yet</div>'; return; }
-  const qIcon = { best: '✓', fine: '≈', blunder: '✗' };
-  body.innerHTML = moveLog.map(m =>
-    `<div class="log-entry ${m.player}-entry"><span class="log-turn">${m.turn}</span><span class="log-sym">${SYMBOLS[m.player] || ''}</span><span class="log-pos">${m.pos}</span><span class="log-badge quality-${m.quality || 'fine'}">${qIcon[m.quality] || '≈'}</span></div>`
-  ).join('');
-  body.scrollTop = body.scrollHeight;
-}
-
-/* ─────────────────────────────────────────────
    Post-game move analysis
 ───────────────────────────────────────────── */
 function showAnalysis() {
@@ -343,12 +329,10 @@ function showGameSummary() {
   if (!el) return;
   const total    = moveLog.length;
   const optimal  = moveLog.filter(m => m.quality === 'best').length;
-  const blunders = moveLog.filter(m => m.quality === 'blunder').length;
   const chaos    = chaosLog.length;
   if (!total) return;
   const parts = [`${total} moves`];
   if (optimal  > 0) parts.push(`${optimal} optimal`);
-  if (blunders > 0) parts.push(`${blunders} blunder${blunders > 1 ? 's' : ''}`);
   if (chaos    > 0) parts.push(`${chaos} chaos event${chaos > 1 ? 's' : ''}`);
   el.textContent = parts.join(' · ');
   el.classList.add('visible');

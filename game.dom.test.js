@@ -619,3 +619,54 @@ test('Old saved settings for removed fun modes (Cosmic, Storm, Fog, Timed) are i
   page.clock.tick(20000);                                                            // no timer fires a move
   expect(page.t.state.board.filter(v => v).length).toBe(1);
 });
+
+// ─── Trim step 2: strategy layer ──────────────────────────────────────────────
+
+test('A mistake gets no ✗ badge and no blunder pop-up; a best move gets a ✓', () => {
+  page = bootPage();
+  page.clock.tick(INTRO_MS);
+  page.setRandom(0.9);
+  page.clickCell(4);                       // Egypt takes the centre (best)
+  page.clock.tick(100);                    // the ✓ appears just after the move
+  expect(page.$('board').children[4].querySelector('.move-badge').textContent).toBe('✓');
+  page.clickCell(1);                       // India answers on an edge: loses with best play
+  expect(page.w.eval("moveLog[1].quality")).toBe('blunder');
+  page.clock.tick(500);
+  const cell = page.$('board').children[1];
+  expect(cell.querySelector('.cell-quality-badge, .move-badge')).toBeNull();
+  expect(page.$('chaos-event').textContent).not.toMatch(/Blunder/);
+});
+
+test('⋯ More opens a menu, closes on Escape, and its items still work', () => {
+  page = bootPage();
+  page.clock.tick(INTRO_MS);
+  const more = page.$('btn-more'), menu = page.$('more-menu');
+  expect(menu.hidden).toBe(true);
+  more.click();
+  expect(menu.hidden).toBe(false);
+  expect(more.getAttribute('aria-expanded')).toBe('true');
+  page.key('Escape');
+  expect(menu.hidden).toBe(true);
+  expect(more.getAttribute('aria-expanded')).toBe('false');
+
+  more.click();
+  page.$('btn-spectator').click();         // choosing an item closes the menu
+  expect(menu.hidden).toBe(true);
+  expect(page.$('btn-spectator').textContent).toBe('⏹ Stop demo');
+  expect(more.classList.contains('on')).toBe(true);   // demo running is visible on ⋯ More
+  page.$('btn-spectator').click();
+  expect(more.classList.contains('on')).toBe(false);
+});
+
+test('Moves & analysis is available mid-game and lists the moves', () => {
+  page = bootPage();
+  page.clock.tick(INTRO_MS);
+  page.setRandom(0.9);
+  page.clickCell(0);
+  page.clickCell(4);
+  page.$('btn-analysis').click();
+  expect(page.$('analysis-modal').classList.contains('visible')).toBe(true);
+  expect(page.$('analysis-list').querySelectorAll('.analysis-entry').length).toBe(2);
+  expect(page.$('btn-copy-moves')).not.toBeNull();
+  for (const id of ['btn-log', 'move-log-panel', 'eval-bar']) expect(page.$(id)).toBeNull();
+});

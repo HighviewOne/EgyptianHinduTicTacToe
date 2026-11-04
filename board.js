@@ -1,6 +1,6 @@
 /* ─────────────────────────────────────────────
    board.js — drawing the board: cells, grid and win lines,
-   aura, win seal, eval bar, move badges, hint, replay, confetti
+   aura, win seal, move badges, hint, replay, confetti
    Plain <script>: shares the page's global scope with the
    other game files (load order: see index.html).
 ───────────────────────────────────────────── */
@@ -219,30 +219,6 @@ function hideWinSeal() {
 }
 
 /* ─────────────────────────────────────────────
-   Position evaluation bar (minimax score → bar)
-───────────────────────────────────────────── */
-function updateEvalBar(isHinduTurn) {
-  const eEl  = document.getElementById('eval-egypt');
-  const hEl  = document.getElementById('eval-hindu');
-  const pE   = document.getElementById('eval-pct-egypt');
-  const pH   = document.getElementById('eval-pct-hindu');
-  if (!eEl || !hEl) return;
-  if (gameState.board.every(v => !v)) {
-    eEl.style.width = '50%'; hEl.style.width = '50%';
-    if (pE) pE.textContent = '50%';
-    if (pH) pH.textContent = '50%';
-    return;
-  }
-  // Only the outcome with best play: +10 = HINDU wins, -10 = EGYPT wins, 0 = draw
-  const score = Math.sign(minimax(rulesBoard(), isHinduTurn, -Infinity, Infinity)) * 10;
-  const hinduPct = Math.round((score + 10) / 20 * 100);
-  eEl.style.width = `${100 - hinduPct}%`;
-  hEl.style.width = `${hinduPct}%`;
-  if (pE) pE.textContent = `${100 - hinduPct}%`;
-  if (pH) pH.textContent = `${hinduPct}%`;
-}
-
-/* ─────────────────────────────────────────────
    Move quality — badge (✓ / ≈ / ✗) on placed cell
 ───────────────────────────────────────────── */
 /* Returns {quality, bestIdx} in a single minimax pass over all options */
@@ -269,11 +245,12 @@ function computeMoveDetails(snap, player, moveIdx) {
   return { quality, bestIdx };
 }
 function showMoveBadge(cellIdx, quality) {
+  if (quality !== 'best') return;   // praise good moves only; never mark a mistake
   const cells = boardEl.querySelectorAll('.cell');
   if (!cells[cellIdx]) return;
   const badge = document.createElement('div');
   badge.className = `move-badge quality-${quality}`;
-  badge.textContent = quality === 'best' ? '✓' : quality === 'fine' ? '≈' : '✗';
+  badge.textContent = '✓';
   cells[cellIdx].appendChild(badge);
   setTimeout(() => badge.remove(), 1600);
 }

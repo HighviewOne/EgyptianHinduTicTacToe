@@ -7,7 +7,7 @@
 
 [![CI](https://github.com/HighviewOne/EgyptianHinduTicTacToe/actions/workflows/ci.yml/badge.svg)](https://github.com/HighviewOne/EgyptianHinduTicTacToe/actions/workflows/ci.yml)
 [![Deploy](https://github.com/HighviewOne/EgyptianHinduTicTacToe/actions/workflows/pages.yml/badge.svg)](https://github.com/HighviewOne/EgyptianHinduTicTacToe/actions/workflows/pages.yml)
-[![Tests](https://img.shields.io/badge/Tests-78%20passing-brightgreen?style=flat-square)](game.dom.test.js)
+[![Tests](https://img.shields.io/badge/Tests-81%20passing-brightgreen?style=flat-square)](game.dom.test.js)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
 
 ![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat-square&logo=html5&logoColor=white)
@@ -67,7 +67,7 @@ Standard Tic-Tac-Toe is solved — but this isn't standard Tic-Tac-Toe.
 
 - **Cultural immersion**: Five historical themes (Ancient Egypt, Hindu mythology, Greek vs Norse, Chinese Dragon/Phoenix, Samurai vs Ninja) each come with unique symbols, color palettes, procedurally generated music in the theme's modal scale, five historically-grounded lore facts, per-player quips, and themed win messages.
 - **Chaos Mode**: 1–3 randomly chosen rules from a 9-rule catalogue activate each round — pieces teleport, swap allegiances, get smited by lightning, or players lose their turn entirely. Every game is different.
-- **Strategic depth**: Three AI levels (Easy / Medium / Hard) where Hard uses full minimax with alpha-beta pruning. The position evaluation bar shows who's winning in real time. Move quality badges (✓ / ≈ / ✗) rate each decision.
+- **Strategic depth**: Three AI levels (Easy / Medium / Hard) where Hard uses full minimax with alpha-beta pruning. A ✓ pops up when you find the best move (mistakes are never marked), and 💡 Hint shows the best cell.
 - **AI vs AI Demo**: Watch two Hard AIs battle each other continuously, with opening move announcements and auto-restart.
 - **Accessible**: full keyboard play, screen-reader labels for the board and controls, proper dialogs, and a reduced-motion mode that keeps every highlight visible.
 
@@ -130,8 +130,9 @@ Toggle Chaos mode to activate 1–3 randomly chosen rules each round. Active rul
 | Button | Effect |
 |---|---|
 | ⚡ Chaos | Activates the Chaos rules system |
-| ⛶ Full | Toggle fullscreen |
-| 👁 Demo | AI vs AI spectator mode — auto-restarts each game |
+| ⋯ More | Opens a small menu: 🔍 Moves & analysis, 👁 Demo (AI vs AI, auto-restarts), ⛶ Full screen, 📤 Share |
+
+🔍 **Moves & analysis** works any time, mid-game included: every move with its rating (✓ best · ≈ okay · ✗ mistake), the best alternative, this round's chaos events, and a 📋 Copy moves button.
 
 ---
 
@@ -202,7 +203,7 @@ AI Demo games are not counted.
 | `Arrow keys` + `Enter`/`Space` | Move around the board and place a piece |
 | `U` | Undo last move |
 | `H` | Show move hint (pulses best cell for 1.8 s) |
-| `A` | Open/close post-game analysis |
+| `A` | Open/close Moves & analysis |
 | `R` | Replay last game |
 | `S` | Toggle AI demo mode |
 | `C` | Chaos rule picker (when Chaos is on) |
@@ -249,8 +250,8 @@ data.js             all static data: themes, chaos rules, quips, achievements
 audio.js            Web Audio API — sound effects + procedural background music
 ai.js               minimax (depth-aware, alpha-beta pruning) + mode management
 chaos.js            Chaos mode: rule state, picking/config, rules bar, overlay
-stats.js            all-time stats, ranks, achievements, move log, analysis
-board.js            board drawing: cells, grid/win lines, seal, eval bar, hint, replay
+stats.js            all-time stats, ranks, achievements, moves & analysis
+board.js            board drawing: cells, grid/win lines, seal, hint, replay
 themes.js           apply/generate themes, intro, lore popup, papyrus ornaments
 script.js           game state, move handling (handleClick), rounds, undo,
                     save/restore, prefs, keyboard/touch input, startup
