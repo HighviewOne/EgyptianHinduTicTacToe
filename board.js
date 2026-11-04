@@ -36,17 +36,10 @@ function renderBoard(winCells = []) {
     cell.className = 'cell';
     cell.setAttribute('role', 'button');
     const _pos = POS_LABELS[i] || `${i + 1}`;
-    const _fogged = val && fogMode && !gameState.gameOver && val !== gameState.currentPlayer;
-    cell.setAttribute('aria-label',
-      !val ? `${_pos}, empty` : _fogged ? `${_pos}, hidden piece` : `${_pos}, ${playerName(val)}`);
+    cell.setAttribute('aria-label', !val ? `${_pos}, empty` : `${_pos}, ${playerName(val)}`);
     if (val) {
       cell.classList.add('taken', `${val}-cell`);
-      const _fogHide = fogMode && !gameState.gameOver
-        && val !== gameState.currentPlayer;
-      if (_fogHide) {
-        cell.classList.add('fog-hidden');
-        cell.textContent = '●';
-      } else {
+      {
         const ink = val === EGYPT
           ? (currentTheme.p1ink || currentTheme.players.egypt.primary || '#9b3b14')
           : (currentTheme.p2ink || currentTheme.players.hindu.primary || '#3a4a8a');
@@ -73,7 +66,7 @@ function renderBoard(winCells = []) {
     }
     // Threat highlighting — only during human turn (no point showing while AI thinks)
     const _humanTurn = !aiMode || gameState.currentPlayer === EGYPT;
-    if (_rb[i] === null && !gameState.gameOver && !fogMode && _humanTurn && !spectatorMode) {
+    if (_rb[i] === null && !gameState.gameOver && _humanTurn && !spectatorMode) {
       for (const player of [EGYPT, HINDU]) {
         const testB = [..._rb];
         testB[i] = player;
@@ -135,7 +128,7 @@ function injectGridLines() {
   const cells = boardEl.querySelectorAll('.cell');
   if (!cells.length) return;
   // Layout (offset*) coordinates, not getBoundingClientRect: the board may be
-  // rotated (cosmic) or mirrored, and the SVG inherits that transform itself.
+  // shaking (Chaos Storm), and the SVG inherits that transform itself.
   const W = boardEl.clientWidth || 300, H = boardEl.clientHeight || 300;
   if (W < 10) return;
   const r0 = cellBox(cells[0]), r1 = cellBox(cells[1]), r2 = cellBox(cells[2]);

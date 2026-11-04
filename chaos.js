@@ -17,7 +17,6 @@ let chaosState       = {
   ghostCell: -1, ghostOwner: null,
   wildUsed: false, swapUsed: false, smiteUsed: false,
   blessingUsed: false, skipUsed: false, skipNext: null,
-  mirrorUsed: false, mirror: false,
   solarUsed: false,
 };
 
@@ -27,7 +26,7 @@ let chaosState       = {
 function randInt(n)    { return Math.floor(Math.random() * n); }
 function chaosHas(id)  { return activeChaosRules.some(r => r.id === id); }
 // Board as the rules see it: the Holy Ground cell (if active) is unplayable.
-// Use this for AI/hint/timer move choice and for the win/draw check.
+// Use this for AI/hint move choice and for the win/draw check.
 function rulesBoard() {
   return chaosMode && chaosHas('holy-ground')
     ? blockCell(gameState.board, chaosState.holyCell)
@@ -52,17 +51,9 @@ function initChaosState() {
     ghostCell: -1, ghostOwner: null,
     wildUsed: false, swapUsed: false, smiteUsed: false,
     blessingUsed: false, skipUsed: false, skipNext: null,
-    mirrorUsed: false, mirror: false,
     solarUsed: false,
     holyCell: chaosHas('holy-ground') ? randInt(9) : -1,
   };
-}
-
-function updateBoardTransform() {
-  const parts = [];
-  if (cosmicAngle !== 0) parts.push(`rotate(${cosmicAngle}deg)`);
-  if (chaosState.mirror) parts.push('scaleX(-1)');
-  boardEl.style.transform = parts.join(' ');
 }
 
 function updateChaosBar() {
@@ -191,7 +182,6 @@ function showChaosOverlay() {
     chaosShowing = false;
     scheduleAI();
     scheduleSpectatorAI();
-    if (!spectatorMode && (!aiMode || gameState.currentPlayer === EGYPT)) startTimer();
   };
   const dismissTimer = setTimeout(dismiss, 4600);
   overlay.addEventListener('click', dismiss);

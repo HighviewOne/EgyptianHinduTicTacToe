@@ -15,7 +15,7 @@
 ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat-square&logo=javascript&logoColor=black)
 ![PWA](https://img.shields.io/badge/PWA-5A0FC8?style=flat-square&logo=pwa&logoColor=white)
 
-A fully-featured browser Tic-Tac-Toe game with **cinematic cultural themes**, a **strategic minimax AI**, **10 Chaos rules**, **procedural Web Audio music**, **18 achievements**, and a full progression system — built in vanilla HTML / CSS / JS with zero dependencies.
+A fully-featured browser Tic-Tac-Toe game with **cinematic cultural themes**, a **strategic minimax AI**, **9 Chaos rules**, **procedural Web Audio music**, **16 achievements**, and a full progression system — built in vanilla HTML / CSS / JS with zero dependencies.
 
 **[▶ Play Live](https://highviewone.github.io/EgyptianHinduTicTacToe/)** · Installable PWA · Works offline
 
@@ -66,7 +66,7 @@ Clone or download the repo, open `index.html`, and play. That's it.
 Standard Tic-Tac-Toe is solved — but this isn't standard Tic-Tac-Toe.
 
 - **Cultural immersion**: Five historical themes (Ancient Egypt, Hindu mythology, Greek vs Norse, Chinese Dragon/Phoenix, Samurai vs Ninja) each come with unique symbols, color palettes, procedurally generated music in the theme's modal scale, five historically-grounded lore facts, per-player quips, and themed win messages.
-- **Chaos Mode**: 1–3 randomly chosen rules from a 10-rule catalogue activate each round — pieces teleport, swap allegiances, get smited by lightning, or players lose their turn entirely. Every game is different.
+- **Chaos Mode**: 1–3 randomly chosen rules from a 9-rule catalogue activate each round — pieces teleport, swap allegiances, get smited by lightning, or players lose their turn entirely. Every game is different.
 - **Strategic depth**: Three AI levels (Easy / Medium / Hard) where Hard uses full minimax with alpha-beta pruning. The position evaluation bar shows who's winning in real time. Move quality badges (✓ / ≈ / ✗) rate each decision.
 - **AI vs AI Demo**: Watch two Hard AIs battle each other continuously, with opening move announcements and auto-restart.
 - **Accessible**: full keyboard play, screen-reader labels for the board and controls, proper dialogs, and a reduced-motion mode that keeps every highlight visible.
@@ -119,7 +119,6 @@ Toggle Chaos mode to activate 1–3 randomly chosen rules each round. Active rul
 | Smite | ⚡ | A divine bolt obliterates a random enemy piece |
 | Blessing of Twofold | ✨ | One lucky player claims two squares in a single turn |
 | Cursed Skip | 💀 | A player's next turn is silently, divinely skipped |
-| Mirror Realm | 🪞 | The board is horizontally reflected |
 | Chaos Storm | 🌪 | The board shakes violently after every move |
 | Solar Flare | 🌟 | A blinding flash strikes at the worst moment |
 | Holy Ground | ⛪ | One cell is cursed — no piece may be placed there (if it's the last empty cell, the game is a draw) |
@@ -130,10 +129,7 @@ Toggle Chaos mode to activate 1–3 randomly chosen rules each round. Active rul
 
 | Button | Effect |
 |---|---|
-| ✨ Cosmic | Board rotates 3° per turn, accumulating over the game |
-| 🌪 Storm | Board shakes randomly on 38 % of turns |
 | ⚡ Chaos | Activates the Chaos rules system |
-| ⏱ Timed | 15-second move timer; random move placed on expiry |
 | ⛶ Full | Toggle fullscreen |
 | 👁 Demo | AI vs AI spectator mode — auto-restarts each game |
 
@@ -159,7 +155,7 @@ Select **Best of 3 / 5 / 7** from the Match row. Pip indicators on each player c
 
 ## Achievements
 
-18 unlockable achievements stored in `localStorage`. A slide-in toast confirms each unlock; multiple unlocks queue gracefully. Achievements are earned by human players only — never in AI Demo mode or when the AI wins.
+16 unlockable achievements stored in `localStorage`. A slide-in toast confirms each unlock; multiple unlocks queue gracefully. Achievements are earned by human players only — never in AI Demo mode or when the AI wins.
 
 | Achievement | Condition |
 |---|---|
@@ -170,11 +166,9 @@ Select **Best of 3 / 5 / 7** from the Match row. Pip indicators on each player c
 | 🤖 Machine Breaker | Defeat the Hard AI |
 | ⚡ Lord of Chaos | Win a round with Chaos mode on |
 | 🌪 Chaos Champion | Win with all 3 chaos rules active simultaneously |
-| ⏱ Speed Demon | Win while Timed mode is on |
 | 🏆 Match Master | Win a Best of 5 or 7 match |
 | 👑 Undisputed | Win a Best of 3 without dropping a round |
 | 🔄 Comeback King | Win a match after trailing 0–2+ in a Bo5+ |
-| ✨ Cosmic Champion | Win with Cosmic mode on |
 | 🌍 Pilgrim of Ages | Play all 5 named themes |
 | 🐉 Dragon Lord | Win a game with the Dragon vs Phoenix theme |
 | 💨 Lightning Strike | Win in the minimum 5 moves |
@@ -304,7 +298,7 @@ A few conventions keep the game's many timers and chaos rules from interfering w
 
 - **Round-scoped timers** — any delayed action that belongs to the current round (a toast, a status restore, the win seal…) must use `roundTimeout(fn, ms)`, not `setTimeout`. `newRound()` and `undo()` cancel them all, so nothing fires into the next round. Plain `setTimeout` is only for cosmetic cleanup that must always run, like removing an animation class.
 - **AI moves** — `scheduleAI()` / `scheduleSpectatorAI()` store their pending move in `aiTimer`; call `cancelAI()` whenever the board is replaced.
-- **Holy Ground** — anything that picks or checks a move (AI, hints, move timer, win/draw check) should use `rulesBoard()`, which marks the forbidden cell as unplayable.
+- **Holy Ground** — anything that picks or checks a move (AI, hints, win/draw check) should use `rulesBoard()`, which marks the forbidden cell as unplayable.
 - **Adding a script file** — add its `<script>` tag to `index.html` (before `script.js`, which runs startup) and to `ASSETS` in `sw.js`. The tests, linter and deploy read the list from `index.html`; a test checks `sw.js`.
 - **Tests** — `game.dom.test.js` loads the real page, so a new bug can usually be reproduced there first: drive it with `clickCell`, `key` and `clock.tick`, and control randomness with `setRandom`.
 
