@@ -25,7 +25,10 @@ function stub() {
   });
 }
 
-function bootPage({ storage = {}, audioContext = null } = {}) {
+// Tests start as a returning 2-player user unless they pass their own prefs
+// (a brand-new visitor starts vs Easy AI; see the "First visit" test).
+function bootPage({ storage = {}, audioContext = null, firstVisit = false } = {}) {
+  if (!firstVisit && !('ehttt' in storage)) storage = { ehttt: { key: 'egypt-hindu' }, ...storage };
   const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8')
     .replace(/<script[\s\S]*?<\/script>/g, '');
   const errors = [];
@@ -715,4 +718,38 @@ test('Match Master unlocks by winning a Best of 3', () => {
     if (round === 0) page.$('btn-restart').click();
   }
   expect(JSON.parse(page.w.localStorage.getItem('ehttt-ach'))['match-master']).toBeTruthy();
+});
+
+// ─── Trim step 4: defaults and lore ───────────────────────────────────────────
+
+test('First visit starts vs Easy AI; a returning 2-player user stays in 2 Players', () => {
+  page = bootPage({ firstVisit: true });
+  page.clock.tick(INTRO_MS);
+  expect(page.w.eval('aiMode')).toBe('easy');
+  expect(page.$('mode-easy').classList.contains('active')).toBe(true);
+  page.setRandom(0.9);
+  page.clickCell(4);
+  page.clock.tick(1500);                   // the Easy AI replies
+  expect(page.pieces('hindu')).toBe(1);
+  page.clock.uninstall(); page.w.close();
+
+  page = bootPage({ storage: { ehttt: { key: 'egypt-hindu', mode: null } } });
+  page.clock.tick(INTRO_MS);
+  expect(page.w.eval('aiMode')).toBeNull();
+  expect(page.$('mode-2p').classList.contains('active')).toBe(true);
+});
+
+test('The win screen shows a lore fact from the current theme', () => {
+  page = bootPage();
+  page.clock.tick(INTRO_MS);
+  page.setRandom(0.9);
+  for (const c of [0, 3, 1, 4, 2]) page.clickCell(c);   // Egypt wins the top row
+  page.clock.tick(1500);
+  expect(page.$('win-seal').classList.contains('visible')).toBe(true);
+  const facts = page.w.eval('currentTheme.loreFacts');
+  const lore = page.$('win-seal-lore').textContent;
+  expect(lore.startsWith('📜 ')).toBe(true);
+  expect(facts).toContain(lore.slice(3));
+  expect(page.$('lore-toast')).toBeNull();  // the old random lore pop-up is gone
+  expect(page.$('chaos-event').classList.contains('visible')).toBe(false);   // nothing covers the card
 });

@@ -705,7 +705,6 @@ function handleClick(i, fromAI = false) {
     renderBoard(result.cells);
     boardEl.classList.add('game-over');
     updateBoardColor();
-    checkLorePopup();
 
     if (result.winner === 'draw') {
       sfxDraw(currentThemeKey);
@@ -770,7 +769,8 @@ function handleClick(i, fromAI = false) {
       boardWrapEl.classList.add(`win-flash-${w}`);
       boardWrapEl.addEventListener('animationend', () => boardWrapEl.classList.remove(`win-flash-${w}`), { once: true });
       const _lineName = getWinLineName(result.cells);
-      if (_lineName) roundTimeout(() => showChaosEvent(_lineName + '!', 2000), 750);
+      // Shown right away and briefly, so it's gone before the win screen opens at 900 ms
+      if (_lineName) showChaosEvent(_lineName + '!', 850);
       updateAllTimeStats(w);
       updateMatchPips();
       updateStreakBadges();
@@ -1397,6 +1397,12 @@ initEditableNames();
 let _pendingSave = null;
 try { _pendingSave = localStorage.getItem(GAME_SAVE_KEY); } catch (_) {}
 if (!loadPrefs()) {
+  // First visit: start against the computer on Easy, so a child playing alone can
+  // begin right away. (Returning players keep their saved choice, 2 Players included.)
+  aiMode = 'easy';
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('mode-easy').classList.add('active');
+  document.querySelector('#card-hindu .player-title').textContent = 'Easy AI';
   setAura(EGYPT);
   renderBoard();
   showIntro();
