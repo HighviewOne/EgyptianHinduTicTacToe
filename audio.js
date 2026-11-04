@@ -204,10 +204,6 @@ function sfxDraw(themeKey) {
   }
 }
 
-function sfxTimerTick() {
-  note(1200, 'square', 0.06, 0.003, 0.06);
-}
-
 function sfxChaos(id) {
   switch (id) {
     case 'wild-turn':    // rapid ascending glissando
@@ -222,8 +218,6 @@ function sfxChaos(id) {
       [261.63,329.63,392,523.25].forEach((f,i) => note(f,'sine',0.18,0.01,0.35,i*0.1)); break;
     case 'cursed-skip':  // descending minor
       [330,277.18,220].forEach((f,i) => note(f,'triangle',0.20,0.01,0.35,i*0.12)); break;
-    case 'mirror':       // parallel tones
-      note(261.63,'sine',0.18,0.02,0.5); note(523.25,'sine',0.10,0.02,0.5); break;
     case 'solar-flare':  // bright white burst
       [880,1320,1760,2200].forEach((f,i) => note(f,'sine',0.12,0.005,0.25,i*0.03)); break;
     case 'holy-ground':  // pure bell

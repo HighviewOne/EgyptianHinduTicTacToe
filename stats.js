@@ -245,8 +245,6 @@ function checkAchievements(winner) {
     if (gameState.streaks[winner] >= 3) tryUnlock('triple-threat');
     if (aiMode === 'hard' && winner === EGYPT)  tryUnlock('ai-slayer');
     if (chaosMode)  tryUnlock('chaos-winner');
-    if (timedMode)  tryUnlock('speed-win');
-    if (cosmicMode) tryUnlock('cosmic-winner');
     if (matchTarget >= 5 && gameState.scores[winner] >= Math.ceil(matchTarget / 2)) tryUnlock('match-master');
     // Fastest possible win: 5 pieces total (3 for winner, 2 for loser)
     if (gameState.board.filter(v => v).length === 5) tryUnlock('speed-round');

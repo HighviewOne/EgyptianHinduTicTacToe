@@ -62,10 +62,6 @@ const drawsEl    = document.getElementById('draws');
 /* ─────────────────────────────────────────────
    Fun-mode state
 ───────────────────────────────────────────── */
-let cosmicMode    = false;
-let cosmicAngle   = 0;
-let sandstormMode = false;
-let fogMode       = false;
 let introShowing   = false;
 let introTimer     = null;
 let lastPlacedCell = -1;   // index of most-recently placed piece (drives .fresh animation)
@@ -126,7 +122,6 @@ function autoSaveGame() {
       board:         gameState.board,
       currentPlayer: gameState.currentPlayer,
       scores:        gameState.scores,
-      cosmicAngle:   cosmicAngle,
       moveLog:       moveLog,
       gameLog:       gameLog,
       lastPlacedCell: lastPlacedCell,
@@ -168,12 +163,10 @@ function applyRestore() {
     cancelAI();
     cancelRoundTimers();
     stopReplay();
-    clearTimer();
     gameState.history       = [];   // undo snapshots belong to the replaced board
     gameState.board         = g.board;
     gameState.currentPlayer = g.currentPlayer || EGYPT;
     gameState.scores        = g.scores || { egypt: 0, hindu: 0, draws: 0 };
-    cosmicAngle   = g.cosmicAngle || 0;
     moveLog       = g.moveLog    || [];
     // Older saves have no replay log; replay then can't line up with the moves.
     gameLog       = Array.isArray(g.gameLog) && g.gameLog.length === moveLog.length ? g.gameLog : [];
@@ -182,7 +175,6 @@ function applyRestore() {
     gameState.lastWinner = g.lastWinner || null;
     gameState.gameOver = false;
     restoreChaos(g);
-    updateBoardTransform();   // cosmic angle (+ mirror, if restored)
     clearGameSave();
     scoreEgypt.textContent = gameState.scores.egypt;
     scoreHindu.textContent = gameState.scores.hindu;
@@ -198,16 +190,15 @@ function applyRestore() {
     statusEl.className   = `status-text ${gameState.currentPlayer}-msg`;
     statusEl.textContent = LABELS[gameState.currentPlayer];
     showChaosEvent('♻ Game restored!', 2200);
-    // Saved mid-think (India to move vs AI)? Resume the AI; otherwise the human's timer.
+    // Saved mid-think (India to move vs AI)? Resume the AI.
     scheduleAI();
-    if (!spectatorMode && (!aiMode || gameState.currentPlayer === EGYPT)) startTimer();
   } catch(_) {}
 }
 
 // Bring back the saved game's chaos rules (only if Chaos mode is still on).
 const CHAOS_USED_FLAGS = {
   'wild-turn': 'wildUsed', 'swap-souls': 'swapUsed', smite: 'smiteUsed',
-  blessing: 'blessingUsed', mirror: 'mirrorUsed', 'solar-flare': 'solarUsed',
+  blessing: 'blessingUsed', 'solar-flare': 'solarUsed',
 };
 function restoreChaos(g) {
   if (!chaosMode || !Array.isArray(g.chaosRules) || !g.chaosRules.length) return;
@@ -276,14 +267,6 @@ function initEditableNames() {
     });
   });
 }
-
-/* ─────────────────────────────────────────────
-   Timed-mode state
-───────────────────────────────────────────── */
-let timedMode     = false;
-let timerInterval = null;
-let timerLeft     = 15;
-let timerSeconds  = 15;  // configurable timer duration
 
 /* ─────────────────────────────────────────────
    AI vs AI spectator mode
@@ -378,49 +361,6 @@ function vibrate(pattern) {
 }
 
 /* ─────────────────────────────────────────────
-   Move timer
-───────────────────────────────────────────── */
-function onTimerExpire() {
-  if (gameState.gameOver || aiThinking) return;
-  if (aiMode && gameState.currentPlayer === HINDU) return; // AI handles itself
-  const empty = rulesBoard().reduce((a, v, i) => v === null ? [...a, i] : a, []);
-  if (empty.length) handleClick(empty[randInt(empty.length)]);
-}
-
-function clearTimer() {
-  clearInterval(timerInterval);
-  timerInterval = null;
-  const wrap = document.getElementById('timer-wrap');
-  if (wrap) wrap.classList.remove('active');
-}
-
-function startTimer() {
-  clearTimer();
-  if (!timedMode || gameState.gameOver || introShowing || chaosShowing) return;
-  if (aiMode && gameState.currentPlayer === HINDU) return; // no timer for AI
-
-  const SECS = timerSeconds;
-  timerLeft = SECS;
-  const fill = document.getElementById('timer-fill');
-  const wrap = document.getElementById('timer-wrap');
-
-  fill.classList.remove('urgent');
-  fill.style.transition = 'none';
-  fill.style.width = '100%';
-  wrap.classList.add('active');
-  void fill.offsetWidth; // force reflow before animation
-  fill.style.transition = `width ${SECS}s linear`;
-  fill.style.width = '0%';
-
-  timerInterval = setInterval(() => {
-    timerLeft--;
-    if (timerLeft <= Math.min(5, Math.floor(SECS / 3))) fill.classList.add('urgent');
-    if (timerLeft > 0 && timerLeft <= 3) sfxTimerTick();
-    if (timerLeft <= 0) { clearTimer(); onTimerExpire(); }
-  }, 1000);
-}
-
-/* ─────────────────────────────────────────────
    Undo
 ───────────────────────────────────────────── */
 function updateUndoBtn() {
@@ -432,7 +372,6 @@ function saveSnapshot() {
   gameState.history.push({
     board:         [...gameState.board],
     currentPlayer: gameState.currentPlayer,
-    cosmicAngle,
     boardFilter:   boardEl.style.filter,
     chaosState:    { ...chaosState },
     // Undo may follow a win/draw, so keep everything the result changes.
@@ -488,16 +427,13 @@ function undo() {
     document.getElementById('btn-hint').disabled = false;
   }
 
-  cosmicAngle  = snap.cosmicAngle;
   chaosState   = { ...snap.chaosState };
 
   aiThinking = false;
   lastPlacedCell = -1;
   boardEl.classList.remove('ai-thinking', 'game-over');
   boardEl.style.filter = snap.boardFilter;
-  updateBoardTransform();
   clearWinLine();
-  clearTimer();
   cardEgypt.classList.remove('winner-glow', 'match-point');
   cardHindu.classList.remove('winner-glow', 'match-point');
 
@@ -509,7 +445,6 @@ function undo() {
   updateUndoBtn();
   boardEl.classList.add('undo-shake');
   setTimeout(() => boardEl.classList.remove('undo-shake'), 380);
-  if (timedMode && (!aiMode || gameState.currentPlayer === EGYPT)) startTimer();
 }
 
 /* ─────────────────────────────────────────────
@@ -596,7 +531,6 @@ function handleClick(i, fromAI = false) {
 
   // Clear move timer as soon as a move is registered, and drop a pending hint
   // restore — it would put the previous player's status text back.
-  clearTimer();
   clearTimeout(hintTimer);
 
   // Save snapshot for undo (human moves only)
@@ -611,11 +545,10 @@ function handleClick(i, fromAI = false) {
     statusEl.className   = `status-text ${gameState.currentPlayer}-msg`;
     statusEl.textContent = LABELS[gameState.currentPlayer];
     setAura(gameState.currentPlayer);
-    renderBoard();   // fog and the hover symbol depend on whose turn it is
+    renderBoard();   // the hover symbol depends on whose turn it is
     updateTurnUI();
     scheduleAI();
     scheduleSpectatorAI();
-    if (!spectatorMode && (!aiMode || gameState.currentPlayer === EGYPT)) startTimer();
     autoSaveGame();
     return;
   }
@@ -685,17 +618,6 @@ function handleClick(i, fromAI = false) {
       chaosLog.push({ icon: '🔄', name: 'Swap Souls' });
       showChaosEvent('🔄 SOUL SWAP! Two pieces have switched allegiances in a moment of cosmic betrayal!');
     }
-  }
-
-  // ── CHAOS: Mirror Board (22 % once) ──────────────────────────────
-  if (chaosMode && chaosHas('mirror') && !chaosState.mirrorUsed && Math.random() < 0.22) {
-    chaosState.mirrorUsed = true;
-    chaosState.mirror     = !chaosState.mirror;
-    markChaosUsed('mirror');
-    updateBoardTransform();
-    sfxChaos('mirror');
-    chaosLog.push({ icon: '🪞', name: 'Mirror Realm' });
-    showChaosEvent('🪞 MIRROR REALM! The board has been reflected into a parallel dimension!');
   }
 
   // ── CHAOS: Solar Flare (25 % once) ───────────────────────────────
@@ -799,8 +721,6 @@ function handleClick(i, fromAI = false) {
     renderBoard(result.cells);
     boardEl.classList.add('game-over');
     updateBoardColor();
-    if (cosmicMode) cosmicAngle += 3;
-    updateBoardTransform();
     checkLorePopup();
 
     if (result.winner === 'draw') {
@@ -941,11 +861,9 @@ function handleClick(i, fromAI = false) {
 
     sfxPlace(currentThemeKey, currentPlayer);
     updateBoardColor();
-    if (cosmicMode) cosmicAngle += 3;
-    updateBoardTransform();
 
-    // Shaking — sandstorm mode or chaos storm rule
-    if ((sandstormMode && Math.random() < 0.38) || (chaosMode && chaosHas('chaos-storm'))) {
+    // Shaking — Chaos Storm rule
+    if (chaosMode && chaosHas('chaos-storm')) {
       const wrapper = boardEl.parentElement;
       wrapper.classList.remove('shaking');
       void wrapper.offsetWidth;
@@ -998,8 +916,6 @@ function handleClick(i, fromAI = false) {
     }
     scheduleAI();
     scheduleSpectatorAI();
-    // Start timer for the next human move
-    if (!spectatorMode && (!aiMode || gameState.currentPlayer === EGYPT)) startTimer();
   }
   autoSaveGame();
 }
@@ -1018,7 +934,6 @@ function newRound() {
   hideWinSeal();
   resetBoard();
   clearWinLine();
-  clearTimer();
   lastPlacedCell = -1;
   gameLog = [];
   moveLog  = [];
@@ -1033,9 +948,7 @@ function newRound() {
   document.getElementById('btn-hint').disabled = false;
   updateEvalBar(false); // reset to neutral
   boardEl.style.filter = '';
-  cosmicAngle = 0;
   initChaosState();       // reset all chaos state for the new round
-  updateBoardTransform(); // clears cosmic + mirror transforms
   gameState.history = [];
   cardEgypt.classList.remove('winner-glow', 'match-point');
   cardHindu.classList.remove('winner-glow', 'match-point');
@@ -1062,8 +975,6 @@ function newRound() {
   // If AI mode is active and India goes first this round, trigger it now.
   scheduleAI();
   scheduleSpectatorAI();
-  // Start move timer for human's turn (suppressed in spectator mode)
-  if (!spectatorMode && (!aiMode || gameState.currentPlayer === EGYPT)) startTimer();
 }
 
 /* ─────────────────────────────────────────────
@@ -1094,14 +1005,10 @@ function savePrefs() {
     localStorage.setItem('ehttt', JSON.stringify({
       key:        currentThemeKey === 'random' ? 'egypt-hindu' : currentThemeKey,
       mode:       aiMode,
-      cosmic:     cosmicMode,
-      sand:       sandstormMode,
       chaos:      chaosMode,
-      fog:        fogMode,
       match:      matchTarget,
       name1:      customNames.egypt,
       name2:      customNames.hindu,
-      timerSecs:  timerSeconds,
       volSfx:     parseFloat(document.getElementById('vol-slider').value) / 100,
       volMusic:   parseFloat(document.getElementById('vol-music').value)  / 100,
     }));
@@ -1115,10 +1022,7 @@ function loadPrefs() {
     const p = JSON.parse(raw);
 
     // Set fun modes BEFORE applyTheme so newRound() picks them up
-    if (p.cosmic) { cosmicMode    = true; document.getElementById('btn-cosmic').classList.add('active'); }
-    if (p.sand)   { sandstormMode = true; document.getElementById('btn-sandstorm').classList.add('active'); }
     if (p.chaos)  { chaosMode     = true; document.getElementById('btn-chaos').classList.add('active'); }
-    if (p.fog)    { fogMode       = true; document.getElementById('btn-fog').classList.add('on'); }
     loadChaosConfig(p);
     if (p.match != null) {
       matchTarget = p.match;
@@ -1155,12 +1059,6 @@ function loadPrefs() {
     if (p.volMusic != null) {
       setMusicVolume(p.volMusic);
       document.getElementById('vol-music').value = Math.round(p.volMusic * 100);
-    }
-    // Restore timer duration
-    if (p.timerSecs) {
-      timerSeconds = p.timerSecs;
-      const sel = document.getElementById('timer-secs');
-      if (sel) sel.value = timerSeconds;
     }
     return true;
   } catch (_) { return false; }
@@ -1268,10 +1166,6 @@ document.getElementById('win-seal-btn').addEventListener('click', () => {
 document.getElementById('btn-music').addEventListener('click', toggleMusic);
 document.getElementById('vol-slider').addEventListener('input', e => { setVolume(e.target.value / 100); savePrefs(); });
 document.getElementById('vol-music').addEventListener('input',  e => { setMusicVolume(e.target.value / 100); savePrefs(); });
-document.getElementById('timer-secs').addEventListener('change', e => {
-  timerSeconds = parseInt(e.target.value);
-  savePrefs();
-});
 document.getElementById('mode-2p').addEventListener('click',     () => setMode(null));
 document.getElementById('mode-easy').addEventListener('click',   () => setMode('easy'));
 document.getElementById('mode-medium').addEventListener('click', () => setMode('medium'));
@@ -1283,26 +1177,6 @@ document.querySelectorAll('.theme-btn').forEach(btn => {
   });
 });
 
-document.getElementById('btn-cosmic').addEventListener('click', () => {
-  cosmicMode = !cosmicMode;
-  document.getElementById('btn-cosmic').classList.toggle('active', cosmicMode);
-  if (!cosmicMode) { cosmicAngle = 0; updateBoardTransform(); }
-  savePrefs();
-});
-
-document.getElementById('btn-sandstorm').addEventListener('click', () => {
-  sandstormMode = !sandstormMode;
-  document.getElementById('btn-sandstorm').classList.toggle('active', sandstormMode);
-  savePrefs();
-});
-
-document.getElementById('btn-fog').addEventListener('click', () => {
-  fogMode = !fogMode;
-  document.getElementById('btn-fog').classList.toggle('on', fogMode);
-  renderBoard(gameState.lastWinCells || []);
-  savePrefs();
-});
-
 document.getElementById('btn-chaos').addEventListener('click', () => {
   chaosMode = !chaosMode;
   document.getElementById('btn-chaos').classList.toggle('active', chaosMode);
@@ -1310,19 +1184,10 @@ document.getElementById('btn-chaos').addEventListener('click', () => {
     activeChaosRules = [];
     initChaosState();
     updateChaosBar();
-    updateBoardTransform();
     document.getElementById('chaos-config-panel').style.display = 'none';
   }
   savePrefs();
   newRound();
-});
-
-document.getElementById('btn-timed').addEventListener('click', () => {
-  timedMode = !timedMode;
-  document.getElementById('btn-timed').classList.toggle('active', timedMode);
-  document.getElementById('timer-secs').style.display = timedMode ? '' : 'none';
-  if (!timedMode) clearTimer();
-  else if (!gameState.gameOver && (!aiMode || gameState.currentPlayer === EGYPT)) startTimer();
 });
 
 document.getElementById('btn-undo').addEventListener('click', undo);

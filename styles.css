@@ -708,8 +708,6 @@ header { width: 100%; max-width: 1240px; }
   z-index: 2;
 }
 
-/* fog of war */
-.cell.fog-hidden { color: rgba(40,20,0,0.25) !important; font-size: 1.4rem !important; }
 
 
 /* ghost cell */
@@ -773,7 +771,7 @@ header { width: 100%; max-width: 1240px; }
 }
 .board.undo-shake { animation: undoShake .38s ease-out; }
 
-/* ── Sandstorm shake — both board-paper and board-wrapper (compat) ── */
+/* ── Board shake (Chaos Storm) — both board-paper and board-wrapper (compat) ── */
 @keyframes sandstorm {
   0%,100% { transform: translate(0,0) rotate(0deg); }
   12%     { transform: translate(-5px, 2px) rotate(-.4deg); }
@@ -1062,7 +1060,6 @@ header { width: 100%; max-width: 1240px; }
   color: var(--p1-ink);
   border-color: rgba(var(--p1-rgb),.4);
 }
-.btn-fog.on { background: rgba(160,210,255,.12); border-color: rgba(160,210,255,.3); color: #6a8aaa; }
 
 /* ── Match row ── */
 .match-row {
@@ -1110,20 +1107,6 @@ header { width: 100%; max-width: 1240px; }
   background: rgba(var(--p1-rgb),.12);
 }
 
-/* ── Timer bar ── */
-.timer-wrap {
-  width: 100%; max-width: 380px;
-  height: 5px; background: rgba(40,20,0,0.08);
-  border-radius: 2px; overflow: hidden; display: none;
-}
-.timer-wrap.active { display: block; }
-.timer-fill {
-  height: 100%; border-radius: 2px; width: 100%;
-  background: var(--p1-ink);
-  transition: background-color .5s;
-}
-.timer-fill.urgent { background: #cc2200; animation: urgentPulse .5s ease-in-out infinite alternate; }
-@keyframes urgentPulse { from { opacity: 1; } to { opacity: .55; } }
 
 /* ── Eval bar ── */
 .eval-wrap {

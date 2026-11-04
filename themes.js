@@ -48,7 +48,6 @@ function showIntro() {
     introShowing = false;
     scheduleAI();
     scheduleSpectatorAI();
-    if (!spectatorMode && (!aiMode || gameState.currentPlayer === EGYPT)) startTimer();
   };
   introTimer = setTimeout(dismiss, 4000);
   overlay.addEventListener('click', dismiss);

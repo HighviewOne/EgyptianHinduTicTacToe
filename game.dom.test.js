@@ -340,7 +340,7 @@ test('Saved volume does not create a suspended AudioContext; first click resumes
 
 // ─── Accessibility ────────────────────────────────────────────────────────────
 
-test('Board cells are labelled buttons with visible coordinates; fog hides pieces', () => {
+test('Board cells are labelled buttons with visible coordinates', () => {
   page = bootPage();
   page.clock.tick(INTRO_MS);
   const cell = i => page.$('board').children[i];
@@ -350,8 +350,6 @@ test('Board cells are labelled buttons with visible coordinates; fog hides piece
 
   page.clickCell(0);                       // Egypt at A1
   expect(cell(0).getAttribute('aria-label')).toBe('A1, Egypt');
-  page.$('btn-fog').click();               // India to move: Egypt's piece is fogged
-  expect(cell(0).getAttribute('aria-label')).toBe('A1, hidden piece');
 });
 
 test('Toggle buttons expose their state via aria-pressed', async () => {
@@ -360,15 +358,15 @@ test('Toggle buttons expose their state via aria-pressed', async () => {
   const pressed = id => page.$(id).getAttribute('aria-pressed');
   expect(pressed('mode-2p')).toBe('true');
   expect(pressed('mode-hard')).toBe('false');
-  expect(pressed('btn-fog')).toBe('false');
+  expect(pressed('btn-chaos')).toBe('false');
   expect(page.$('btn-install').hasAttribute('aria-pressed')).toBe(false);
 
   page.$('mode-hard').click();
-  page.$('btn-fog').click();
+  page.$('btn-chaos').click();
   await Promise.resolve();                 // MutationObserver callbacks are microtasks
   expect(pressed('mode-hard')).toBe('true');
   expect(pressed('mode-2p')).toBe('false');
-  expect(pressed('btn-fog')).toBe('true');
+  expect(pressed('btn-chaos')).toBe('true');
 });
 
 test('Dialogs: inert while closed, take focus when opened, return it on close', async () => {
@@ -394,13 +392,11 @@ test('Dialogs: inert while closed, take focus when opened, return it on close', 
 
 // ─── Full-review fixes ────────────────────────────────────────────────────────
 
-test('Cursed Skip re-renders for the new player (fog) and restarts their timer', () => {
+test('Cursed Skip swallows the skipped turn and hands it back', () => {
   page = bootPage();
   page.clock.tick(INTRO_MS);
   page.setRandom(0.9);
   page.t.setChaosEnabled(['cursed-skip']);
-  page.$('btn-fog').click();
-  page.$('btn-timed').click();
   page.$('btn-chaos').click();
   page.clock.tick(CHAOS_MS);
 
@@ -411,9 +407,7 @@ test('Cursed Skip re-renders for the new player (fog) and restarts their timer',
 
   expect(page.t.state.board[4]).toBeNull();
   expect(page.t.state.currentPlayer).toBe('egypt');
-  const own = page.$('board').children[0];
-  expect(own.classList.contains('fog-hidden')).toBe(false);   // Egypt sees its own piece
-  expect(page.$('timer-wrap').classList.contains('active')).toBe(true);
+  expect(page.$('board').children[0].getAttribute('aria-label')).toBe('A1, Egypt');
 });
 
 test('A hint followed by a quick move does not restore the old status text', () => {
@@ -611,4 +605,17 @@ test('Service worker caches every script the page loads', () => {
   page = bootPage();
   const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
   SCRIPTS.forEach(f => expect(sw).toContain(`'${f}'`));
+});
+
+test('Old saved settings for removed fun modes (Cosmic, Storm, Fog, Timed) are ignored', () => {
+  page = bootPage({ storage: { 'ehttt': { key: 'egypt-hindu', cosmic: true, sand: true, fog: true, timerSecs: 5 } } });
+  page.clock.tick(INTRO_MS);
+  for (const id of ['btn-cosmic', 'btn-sandstorm', 'btn-fog', 'btn-timed', 'timer-secs', 'timer-wrap']) {
+    expect(page.$(id)).toBeNull();
+  }
+  page.clickCell(0);
+  expect(page.$('board').children[0].getAttribute('aria-label')).toBe('A1, Egypt');   // not hidden
+  expect(page.$('board').style.transform).toBe('');                                  // not rotated
+  page.clock.tick(20000);                                                            // no timer fires a move
+  expect(page.t.state.board.filter(v => v).length).toBe(1);
 });
