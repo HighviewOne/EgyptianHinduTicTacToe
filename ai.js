@@ -105,7 +105,7 @@ function cancelAI() {
 
 function scheduleAI() {
   if (!aiMode || gameState.currentPlayer !== HINDU || gameState.gameOver || aiThinking ||
-      introShowing || chaosShowing || chaosState.lagActive) return;
+      introShowing || chaosShowing) return;
   aiThinking = true;
   boardEl.classList.add('ai-thinking');
   showPondering(HINDU);

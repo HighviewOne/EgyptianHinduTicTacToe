@@ -82,7 +82,7 @@ let gameLog   = [];   // Array of board snapshots after each move
 let replaying = false;
 let replayTimer = null;
 // Round-scoped timers: delayed actions that belong to the current round
-// (move toasts, status restores, Divine Lag end, win seal, match victory,
+// (move toasts, status restores, win seal, match victory,
 // demo auto-restart, …). newRound() and undo() cancel them all, so nothing
 // from an old round or an undone move can fire late. Use plain setTimeout
 // only for cosmetic cleanup that must always run (e.g. removing a CSS class).
@@ -208,15 +208,13 @@ function applyRestore() {
 const CHAOS_USED_FLAGS = {
   'wild-turn': 'wildUsed', 'swap-souls': 'swapUsed', smite: 'smiteUsed',
   blessing: 'blessingUsed', mirror: 'mirrorUsed', 'solar-flare': 'solarUsed',
-  'divine-lag': 'lagUsed', treachery: 'treacheryUsed',
 };
 function restoreChaos(g) {
   if (!chaosMode || !Array.isArray(g.chaosRules) || !g.chaosRules.length) return;
   const rules = CHAOS_RULES.filter(r => g.chaosRules.includes(r.id));
   if (!rules.length) return;
   activeChaosRules = rules;
-  // A Divine Lag freeze has no timer left to end it after a reload.
-  chaosState = { ...chaosState, ...(g.chaosState || {}), lagActive: false };
+  chaosState = { ...chaosState, ...(g.chaosState || {}) };
   chaosLog   = Array.isArray(g.chaosLog) ? g.chaosLog : [];
   updateChaosBar();
   Object.entries(CHAOS_USED_FLAGS).forEach(([id, flag]) => { if (chaosState[flag]) markChaosUsed(id); });
@@ -292,7 +290,7 @@ let timerSeconds  = 15;  // configurable timer duration
 ───────────────────────────────────────────── */
 function scheduleSpectatorAI() {
   if (!spectatorMode || gameState.currentPlayer !== EGYPT || gameState.gameOver ||
-      aiThinking || introShowing || chaosShowing || chaosState.lagActive) return;
+      aiThinking || introShowing || chaosShowing) return;
   aiThinking = true;
   boardEl.classList.add('ai-thinking');
   showPondering(EGYPT);
@@ -588,7 +586,7 @@ function handleClick(i, fromAI = false) {
   const { board, currentPlayer } = gameState;
 
   // Guards
-  if (gameState.gameOver || board[i] || aiThinking || chaosState.lagActive) return;
+  if (gameState.gameOver || board[i] || aiThinking) return;
   if (!fromAI && aiMode && currentPlayer === HINDU) return;
   if (chaosMode && chaosHas('holy-ground') && chaosState.holyCell === i) {
     sfxChaos('holy-ground');
@@ -708,32 +706,6 @@ function handleClick(i, fromAI = false) {
     chaosLog.push({ icon: '🌟', name: 'Solar Flare' });
     triggerSolarFlare();
     showChaosEvent('🌟 SOLAR FLARE! Blinding divine light has descended upon the battlefield!');
-  }
-
-  // ── CHAOS: Divine Lag (22 % once — freeze input 3 s) ─────────────
-  if (chaosMode && chaosHas('divine-lag') && !chaosState.lagUsed && Math.random() < 0.22) {
-    chaosState.lagUsed   = true;
-    chaosState.lagActive = true;
-    markChaosUsed('divine-lag');
-    sfxChaos('divine-lag');
-    chaosLog.push({ icon: '⏳', name: 'Divine Lag' });
-    showChaosEvent('⏳ DIVINE LAG! The celestial servers are buffering... please hold...', 3300);
-    // When the lag ends, resume whichever AI was waiting (it can't start during lag).
-    roundTimeout(() => {
-      chaosState.lagActive = false;
-      scheduleAI();
-      scheduleSpectatorAI();
-    }, 3000);
-  }
-
-  // ── CHAOS: Treachery (25 % once — placed piece switches allegiance) ─
-  if (chaosMode && chaosHas('treachery') && !chaosState.treacheryUsed && Math.random() < 0.25) {
-    chaosState.treacheryUsed = true;
-    markChaosUsed('treachery');
-    board[actualI] = getNextPlayer(currentPlayer);
-    sfxChaos('treachery');
-    chaosLog.push({ icon: '🗡', name: 'Treachery' });
-    showChaosEvent(`🗡 TREACHERY! The piece betrays its master and now serves the enemy!`);
   }
 
   // ── Record board snapshot for replay ─────────────────────────────
@@ -988,13 +960,6 @@ function handleClick(i, fromAI = false) {
       const _fc = lastPlacedCell;
       const _q  = _details.quality;
       roundTimeout(() => showMoveBadge(_fc, _q), 80);
-    }
-
-    // ── CHAOS: Phantom Veil — pieces invisible for 1.5 s ─────────────
-    if (chaosMode && chaosHas('phantom-veil')) {
-      sfxChaos('phantom-veil');
-      boardEl.classList.add('phantom-veil');
-      setTimeout(() => boardEl.classList.remove('phantom-veil'), 1500);
     }
 
     if (!grantBlessing) gameState.currentPlayer = getNextPlayer(currentPlayer);

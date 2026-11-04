@@ -15,7 +15,7 @@
 ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat-square&logo=javascript&logoColor=black)
 ![PWA](https://img.shields.io/badge/PWA-5A0FC8?style=flat-square&logo=pwa&logoColor=white)
 
-A fully-featured browser Tic-Tac-Toe game with **cinematic cultural themes**, a **strategic minimax AI**, **13 Chaos rules**, **procedural Web Audio music**, **18 achievements**, and a full progression system — built in vanilla HTML / CSS / JS with zero dependencies.
+A fully-featured browser Tic-Tac-Toe game with **cinematic cultural themes**, a **strategic minimax AI**, **10 Chaos rules**, **procedural Web Audio music**, **18 achievements**, and a full progression system — built in vanilla HTML / CSS / JS with zero dependencies.
 
 **[▶ Play Live](https://highviewone.github.io/EgyptianHinduTicTacToe/)** · Installable PWA · Works offline
 
@@ -66,7 +66,7 @@ Clone or download the repo, open `index.html`, and play. That's it.
 Standard Tic-Tac-Toe is solved — but this isn't standard Tic-Tac-Toe.
 
 - **Cultural immersion**: Five historical themes (Ancient Egypt, Hindu mythology, Greek vs Norse, Chinese Dragon/Phoenix, Samurai vs Ninja) each come with unique symbols, color palettes, procedurally generated music in the theme's modal scale, five historically-grounded lore facts, per-player quips, and themed win messages.
-- **Chaos Mode**: 1–3 randomly chosen rules from a 13-rule catalogue activate each round — pieces teleport, swap allegiances, get smited by lightning, or players lose their turn entirely. Every game is different.
+- **Chaos Mode**: 1–3 randomly chosen rules from a 10-rule catalogue activate each round — pieces teleport, swap allegiances, get smited by lightning, or players lose their turn entirely. Every game is different.
 - **Strategic depth**: Three AI levels (Easy / Medium / Hard) where Hard uses full minimax with alpha-beta pruning. The position evaluation bar shows who's winning in real time. Move quality badges (✓ / ≈ / ✗) rate each decision.
 - **AI vs AI Demo**: Watch two Hard AIs battle each other continuously, with opening move announcements and auto-restart.
 - **Accessible**: full keyboard play, screen-reader labels for the board and controls, proper dialogs, and a reduced-motion mode that keeps every highlight visible.
@@ -122,10 +122,7 @@ Toggle Chaos mode to activate 1–3 randomly chosen rules each round. Active rul
 | Mirror Realm | 🪞 | The board is horizontally reflected |
 | Chaos Storm | 🌪 | The board shakes violently after every move |
 | Solar Flare | 🌟 | A blinding flash strikes at the worst moment |
-| Divine Lag | ⏳ | All input freezes for 3 celestial seconds |
 | Holy Ground | ⛪ | One cell is cursed — no piece may be placed there (if it's the last empty cell, the game is a draw) |
-| Phantom Veil | 👁 | All pieces vanish from sight for 1.5 seconds |
-| Treachery | 🗡 | 25 % chance a newly placed piece betrays its owner |
 
 ---
 
