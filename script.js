@@ -181,10 +181,8 @@ function applyRestore() {
     drawsEl.textContent    = gameState.scores.draws;
     renderBoard([]);
     updateTurnUI();
-    updateMoveLog();
     updateUndoBtn();
     updateBoardColor();
-    updateEvalBar(gameState.currentPlayer === HINDU);
     updateSessionRate();
     updateStreakBadges();
     statusEl.className   = `status-text ${gameState.currentPlayer}-msg`;
@@ -300,8 +298,9 @@ function toggleSpectator() {
   if (spectatorMode) {
     _prevAiMode = aiMode;
     aiMode = 'hard';  // HINDU will auto-play via existing scheduleAI()
-    btn.textContent = '⏹ Stop';
+    btn.textContent = '⏹ Stop demo';
     btn.classList.add('on');
+    document.getElementById('btn-more').classList.add('on');   // demo is running
     if (speedSel) speedSel.style.display = '';
     showChaosEvent('👁 AI Demo — sit back and watch!', 2800);
     newRound();
@@ -309,6 +308,7 @@ function toggleSpectator() {
     aiMode = _prevAiMode;
     btn.textContent = '👁 Demo';
     btn.classList.remove('on');
+    document.getElementById('btn-more').classList.remove('on');
     if (speedSel) speedSel.style.display = 'none';
     // Restore mode-button UI
     document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
@@ -403,7 +403,6 @@ function undo() {
   moveLog.length  = snap.moveLogLen;
   gameLog.length  = snap.gameLogLen;
   chaosLog.length = snap.chaosLogLen;
-  updateMoveLog();
 
   // Undoing a finished game also takes back its result (achievements stay)
   if (wasOver) {
@@ -423,7 +422,6 @@ function undo() {
     updateSessionRate();
     updateRankBadges();
     document.getElementById('btn-replay').style.display   = 'none';
-    document.getElementById('btn-analysis').style.display = 'none';
     document.getElementById('btn-hint').disabled = false;
   }
 
@@ -643,22 +641,13 @@ function handleClick(i, fromAI = false) {
     bestPos: (_details.bestIdx !== _clickedI && _details.bestIdx !== lastPlacedCell)
              ? (POS_LABELS[_details.bestIdx] || null) : null,
   });
-  updateMoveLog();
 
-  // ── Blunder alert (human moves only) ────────────────────────────
-  const _isAiMove = (aiMode && currentPlayer === HINDU) || spectatorMode;
-  if (_details.quality === 'blunder' && !_isAiMove) {
-    const _lastM = moveLog[moveLog.length - 1];
-    const _hint  = _lastM && _lastM.bestPos ? ` · Best: ${_lastM.bestPos}` : '';
-    roundTimeout(() => showChaosEvent(`⚠ Blunder!${_hint}`, 2200), 200);
-  }
-
-  // ── Floating quality badge on placed cell ───────────────────────
-  const _qBadgeEl = boardEl.children[lastPlacedCell];
+  // ── Floating ✓ on the placed cell for a best move (mistakes are never marked) ──
+  const _qBadgeEl = _details.quality === 'best' ? boardEl.children[lastPlacedCell] : null;
   if (_qBadgeEl) {
     const _qBadge = document.createElement('span');
-    _qBadge.className = `cell-quality-badge quality-${_details.quality}`;
-    _qBadge.textContent = _details.quality === 'best' ? '✓' : _details.quality === 'fine' ? '≈' : '✗';
+    _qBadge.className = 'cell-quality-badge quality-best';
+    _qBadge.textContent = '✓';
     _qBadgeEl.appendChild(_qBadge);
     setTimeout(() => _qBadge.remove(), 1400);
   }
@@ -742,7 +731,6 @@ function handleClick(i, fromAI = false) {
       checkAchievements('draw');
       document.getElementById('btn-replay').style.display = '';
       document.getElementById('btn-hint').disabled = true;
-      document.getElementById('btn-analysis').style.display = '';
       roundTimeout(showGameSummary, 900);
       maybeShowTip();
     } else {
@@ -802,7 +790,6 @@ function handleClick(i, fromAI = false) {
       checkAchievements(w);
       document.getElementById('btn-replay').style.display = '';
       document.getElementById('btn-hint').disabled = true;
-      document.getElementById('btn-analysis').style.display = '';
       roundTimeout(showGameSummary, 900);
       maybeShowTip();
       if (matchTarget && gameState.scores[w] >= Math.ceil(matchTarget / 2)) {
@@ -908,7 +895,6 @@ function handleClick(i, fromAI = false) {
     setAura(gameState.currentPlayer);
     updateTurnUI();
     updateUndoBtn();
-    updateEvalBar(gameState.currentPlayer === HINDU);
     // Warn human player when they're in a forced-loss position (only meaningful after move 4)
     if (aiMode && !spectatorMode && gameState.currentPlayer === EGYPT && !gameState.gameOver && moveLog.length >= 4) {
       const _score = minimax(rulesBoard(), false, -Infinity, Infinity);
@@ -938,15 +924,12 @@ function newRound() {
   gameLog = [];
   moveLog  = [];
   chaosLog = [];
-  updateMoveLog();
   gameState.lastWinCells = [];
   hintUsedThisGame = false;
   boardEl.classList.remove('game-over');
   updateStreakBadges();
   document.getElementById('btn-replay').style.display = 'none';
-  document.getElementById('btn-analysis').style.display = 'none';
   document.getElementById('btn-hint').disabled = false;
-  updateEvalBar(false); // reset to neutral
   boardEl.style.filter = '';
   initChaosState();       // reset all chaos state for the new round
   gameState.history = [];
@@ -1108,6 +1091,7 @@ document.addEventListener('keydown', e => {
     document.getElementById('match-victory').classList.remove('visible');
     document.getElementById('shortcut-help').classList.remove('visible');
     document.getElementById('analysis-modal').classList.remove('visible');
+    closeMoreMenu();
     document.getElementById('achievements-modal').classList.remove('visible');
     document.getElementById('lore-modal').classList.remove('visible');
     document.getElementById('chaos-config-panel').style.display = 'none';
@@ -1137,11 +1121,9 @@ document.addEventListener('keydown', e => {
     if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
     else document.exitFullscreen().catch(() => {});
   } else if (e.code === 'KeyA' && !e.repeat) {
-    if (gameState.gameOver) {
-      const am = document.getElementById('analysis-modal');
-      if (am.classList.contains('visible')) am.classList.remove('visible');
-      else showAnalysis();
-    }
+    const am = document.getElementById('analysis-modal');
+    if (am.classList.contains('visible')) am.classList.remove('visible');
+    else showAnalysis();
   } else if (e.code === 'KeyS' && !e.repeat) {
     toggleSpectator();
   } else if (e.code === 'KeyR' && !e.repeat) {
@@ -1270,12 +1252,26 @@ document.getElementById('analysis-modal').addEventListener('click', e => {
   if (e.target === e.currentTarget) e.currentTarget.classList.remove('visible');
 });
 
-// Move history log toggle
-document.getElementById('btn-log').addEventListener('click', () => {
-  const body = document.getElementById('move-log-body');
-  const open = body.style.display !== 'none';
-  body.style.display = open ? 'none' : '';
-  document.getElementById('btn-log').classList.toggle('on', !open);
+/* ─────────────────────────────────────────────
+   ⋯ More menu (Moves & analysis, Demo, Full screen, Share)
+───────────────────────────────────────────── */
+function closeMoreMenu() {
+  const menu = document.getElementById('more-menu');
+  if (!menu || menu.hidden) return;
+  menu.hidden = true;
+  document.getElementById('btn-more').setAttribute('aria-expanded', 'false');
+}
+document.getElementById('btn-more').addEventListener('click', e => {
+  e.stopPropagation();
+  const menu = document.getElementById('more-menu');
+  menu.hidden = !menu.hidden;
+  e.currentTarget.setAttribute('aria-expanded', String(!menu.hidden));
+  if (!menu.hidden) menu.querySelector('.more-item').focus();
+});
+// Choosing an item closes the menu (the demo-speed picker stays usable)
+document.querySelectorAll('#more-menu .more-item').forEach(b => b.addEventListener('click', closeMoreMenu));
+document.addEventListener('click', e => {
+  if (!e.target.closest || !e.target.closest('.more-wrap')) closeMoreMenu();
 });
 
 document.getElementById('btn-fullscreen').addEventListener('click', () => {
@@ -1287,7 +1283,7 @@ document.getElementById('btn-fullscreen').addEventListener('click', () => {
 });
 document.addEventListener('fullscreenchange', () => {
   document.getElementById('btn-fullscreen').textContent =
-    document.fullscreenElement ? '✕ Exit Full' : '⛶ Full';
+    document.fullscreenElement ? '✕ Exit full screen' : '⛶ Full screen';
 });
 
 /* ─────────────────────────────────────────────
@@ -1296,7 +1292,7 @@ document.addEventListener('fullscreenchange', () => {
 function copyMoves() {
   const btn = document.getElementById('btn-copy-moves');
   if (!moveLog.length) {
-    if (btn) { btn.textContent = '✗ No moves'; setTimeout(() => btn.textContent = '📋 Moves', 1600); }
+    if (btn) { btn.textContent = 'No moves yet'; setTimeout(() => btn.textContent = '📋 Copy moves', 1600); }
     return;
   }
   const qIcon = { best: '✓', fine: '·', blunder: '✗' };
@@ -1306,7 +1302,7 @@ function copyMoves() {
   const header = `${playerName(EGYPT)} vs ${playerName(HINDU)}`;
   const text   = `${header}\n${lines.join('\n')}`;
   const done = () => {
-    if (btn) { btn.textContent = '✓ Copied!'; setTimeout(() => btn.textContent = '📋 Moves', 1800); }
+    if (btn) { btn.textContent = '✓ Copied!'; setTimeout(() => btn.textContent = '📋 Copy moves', 1800); }
   };
   if (navigator.clipboard) {
     navigator.clipboard.writeText(text).then(done).catch(() => {
@@ -1384,7 +1380,7 @@ function syncPressed(btn) {
   btn.setAttribute('aria-pressed', String(btn.classList.contains('active') || btn.classList.contains('on')));
 }
 const _pressedObserver = new MutationObserver(ms => ms.forEach(m => syncPressed(m.target)));
-document.querySelectorAll('.mode-btn, .match-btn, .theme-btn, .skin-btn, .fun-btn:not(#btn-fullscreen):not(#btn-install)')
+document.querySelectorAll('.mode-btn, .match-btn, .theme-btn, .skin-btn, .fun-btn:not(#btn-install):not(#btn-more), #btn-spectator')
   .forEach(btn => {
     syncPressed(btn);
     _pressedObserver.observe(btn, { attributes: true, attributeFilter: ['class'] });

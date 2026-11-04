@@ -1061,6 +1061,25 @@ header { width: 100%; max-width: 1240px; }
   border-color: rgba(var(--p1-rgb),.4);
 }
 
+/* ── ⋯ More menu ── */
+.more-wrap { position: relative; display: inline-block; }
+.more-menu {
+  position: absolute; top: calc(100% + 4px); right: 0; z-index: 50;
+  display: flex; flex-direction: column; align-items: stretch; gap: 2px;
+  min-width: 190px; padding: 6px;
+  background: #f1dfb1; border: 1px solid rgba(40,20,0,0.25);
+  box-shadow: 0 6px 18px rgba(40,20,0,0.25);
+}
+.more-menu[hidden] { display: none; }
+.more-item {
+  font-family: 'IM Fell DW Pica SC', serif; font-size: 0.72rem; letter-spacing: 0.06em;
+  text-align: left; padding: 7px 10px; cursor: pointer;
+  background: transparent; border: 1px solid transparent; color: var(--ink);
+}
+.more-item:hover, .more-item:focus-visible { background: rgba(40,20,0,0.08); border-color: rgba(40,20,0,0.2); }
+.more-item.on { color: var(--p1-ink); font-weight: 600; }
+.more-menu .timer-select { margin: 0 10px 4px; }
+
 /* ── Match row ── */
 .match-row {
   display: flex; align-items: center; gap: 6px;
@@ -1107,25 +1126,6 @@ header { width: 100%; max-width: 1240px; }
   background: rgba(var(--p1-rgb),.12);
 }
 
-
-/* ── Eval bar ── */
-.eval-wrap {
-  display: flex; align-items: center; gap: 7px; justify-content: center;
-  max-width: 360px; margin: 5px auto 0;
-}
-.eval-label {
-  font-size: .6rem; font-family: 'IM Fell DW Pica SC', serif; letter-spacing: .05em;
-  opacity: .55; min-width: 28px; text-align: center;
-  color: var(--ink);
-}
-.eval-bar {
-  display: flex; height: 4px; border-radius: 0; overflow: hidden;
-  flex: 1; max-width: 280px;
-  background: rgba(40,20,0,0.08);
-}
-.eval-fill { height: 100%; transition: width .55s cubic-bezier(.4,0,.2,1); }
-.eval-egypt { background: linear-gradient(90deg, rgba(var(--p1-rgb),1), rgba(var(--p1-rgb),.55)); }
-.eval-hindu { background: linear-gradient(90deg, rgba(var(--p2-rgb),.55), rgba(var(--p2-rgb),1)); }
 
 /* ── Draws row ── */
 .draws-row {
@@ -1576,24 +1576,8 @@ header { width: 100%; max-width: 1240px; }
 .btn-stats-close:hover { background: rgba(255,255,255,.12); }
 
 /* ── Move log panel ── */
-.move-log-panel { width: 100%; max-width: 420px; margin: 0 auto; }
-.move-log-body {
-  background: rgba(235,220,180,.35); border: 1px solid rgba(40,20,0,.12);
-  border-radius: 2px; padding: 8px 10px; max-height: 120px; overflow-y: auto;
-  margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px 8px; align-content: flex-start;
-}
-.log-entry { display: flex; align-items: center; gap: 3px; font-size: .65rem; opacity: .75; }
 .egypt-entry { color: var(--p1-ink); }
 .hindu-entry { color: var(--p2-ink); }
-.log-turn { color: rgba(40,20,0,.38); font-size: .58rem; min-width: 14px; }
-.log-sym  { font-size: .72rem; }
-.log-pos  { font-family: monospace; font-size: .62rem; }
-.log-badge { font-size: .55rem; font-weight: 700; opacity: .8; }
-.log-badge.quality-best    { color: #3a8a3a; }
-.log-badge.quality-fine    { color: rgba(40,20,0,.4); }
-.log-badge.quality-blunder { color: #8a2a2a; }
-.log-empty { font-size: .62rem; color: rgba(40,20,0,.3); font-style: italic; }
-.btn-log.on { background: rgba(var(--p1-rgb),.15); border-color: rgba(var(--p1-rgb),.35); color: var(--p1-ink); }
 
 /* ── Keyboard shortcut help ── */
 .shortcut-help {
@@ -1698,7 +1682,7 @@ header { width: 100%; max-width: 1240px; }
 .analysis-badge.quality-blunder{ background: rgba(255,56,96,.2);  color: #FF3860; }
 .analysis-best { font-size: .72rem; color: rgba(255,255,255,.4); font-style: italic; margin-left: auto; }
 .analysis-empty { text-align: center; color: rgba(255,255,255,.35); padding: 20px 0; font-size: .88rem; }
-.btn-analysis-close { align-self: center; }
+.analysis-actions { display: flex; gap: 8px; justify-content: center; }
 .analysis-chaos-section { margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.08); }
 .analysis-chaos-title { font-size: .67rem; letter-spacing: .1em; color: rgba(255,255,255,.32); text-transform: uppercase; margin-bottom: 6px; font-family: 'Cinzel', serif; }
 .analysis-chaos-entry { display: flex; align-items: center; gap: 8px; font-size: .77rem; color: rgba(255,255,255,.58); padding: 3px 0; }
@@ -1714,8 +1698,6 @@ header { width: 100%; max-width: 1240px; }
   animation: cellBadgeFade 1.4s ease forwards;
 }
 .cell-quality-badge.quality-best    { color: #3a8a3a; }
-.cell-quality-badge.quality-fine    { color: rgba(40,20,0,.35); }
-.cell-quality-badge.quality-blunder { color: #8a2a2a; }
 @keyframes cellBadgeFade {
   0%   { opacity: 1; transform: translateY(0) scale(1.2); }
   55%  { opacity: 1; }
