@@ -757,9 +757,6 @@ header { width: 100%; max-width: 1240px; }
 }
 .cell.hint-cell { animation: hintPulse .65s ease-in-out infinite !important; }
 
-/* Board skins */
-.board-wrapper.skin-marble .board-paper { filter: saturate(.5); }
-.board-wrapper.skin-neon .board-paper   { filter: hue-rotate(200deg) saturate(.4) contrast(1.1); }
 
 /* ── Undo shake ── */
 @keyframes undoShake {
@@ -1104,27 +1101,6 @@ header { width: 100%; max-width: 1240px; }
   color: var(--p1-ink); border-color: rgba(var(--p1-rgb),.38);
 }
 
-/* ── Skin row ── */
-.skin-row {
-  display: flex;
-  gap: 6px;
-  justify-content: center;
-  margin: 8px 0 2px;
-}
-.skin-btn {
-  width: 32px; height: 32px;
-  border-radius: 0;
-  border: 1px solid rgba(40,20,0,0.14);
-  background: rgba(255,245,215,0.08);
-  cursor: pointer; font-size: .9rem;
-  line-height: 32px; text-align: center;
-  transition: all .2s;
-}
-.skin-btn:hover { background: rgba(255,245,215,0.18); }
-.skin-btn.active {
-  border-color: var(--p1-ink);
-  background: rgba(var(--p1-rgb),.12);
-}
 
 
 /* ── Draws row ── */
@@ -1547,18 +1523,6 @@ header { width: 100%; max-width: 1240px; }
 .recent-label { font-size: .58rem; letter-spacing: .12em; color: rgba(255,255,255,.35); margin-bottom: 8px; }
 .recent-dots { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
 .recent-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; box-shadow: 0 0 6px currentColor; }
-.heat-section { text-align: center; margin: 16px 0 8px; }
-.heat-title { font-size: .58rem; letter-spacing: .12em; color: rgba(255,255,255,.35); margin-bottom: 10px; }
-.heat-grid {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px;
-  max-width: 108px; margin: 0 auto;
-}
-.heat-cell {
-  aspect-ratio: 1; border-radius: 2px;
-  border: 1px solid rgba(255,255,255,.09);
-  display: flex; align-items: center; justify-content: center;
-  font-size: .6rem; font-weight: 700; color: rgba(255,255,255,.55); transition: background .3s;
-}
 .theme-stats-section { margin-bottom: 20px; }
 .theme-stats-title {
   font-family: 'IM Fell DW Pica SC', serif; font-size: .65rem; letter-spacing: .12em;

@@ -118,26 +118,19 @@ function updateAllTimeStats(outcome) {
 }
 function showStatsModal() {
   // Clear previously-inserted dynamic sections to prevent duplication on re-open
-  document.querySelectorAll('.recent-games, .heat-section, .theme-stats-section').forEach(el => el.remove());
+  document.querySelectorAll('.recent-games, .theme-stats-section').forEach(el => el.remove());
   const s  = loadAllTimeStats();
   const n1 = escapeHtml(playerName(EGYPT)).toUpperCase();
   const n2 = escapeHtml(playerName(HINDU)).toUpperCase();
-  const winRate  = s.gamesPlayed
-    ? Math.round(((s.egypt || 0) / s.gamesPlayed) * 100) : 0;
   const avgMoves = s.gamesPlayed && s.totalMoves
     ? (s.totalMoves / s.gamesPlayed).toFixed(1) : '—';
-  const _cFreq   = s.cellFreq || Array(9).fill(0);
-  const _maxFIdx = _cFreq.indexOf(Math.max(..._cFreq));
-  const favCell  = _cFreq[_maxFIdx] > 0 ? (POS_LABELS[_maxFIdx] || `#${_maxFIdx+1}`) : '—';
   document.getElementById('stats-grid').innerHTML = `
     <div class="stat-card"><div class="stat-val">${s.gamesPlayed || 0}</div><div class="stat-lbl">GAMES PLAYED</div></div>
     <div class="stat-card"><div class="stat-val">${s.draws || 0}</div><div class="stat-lbl">DRAWS</div></div>
     <div class="stat-card"><div class="stat-val">${s.egypt || 0}</div><div class="stat-lbl">${n1} WINS</div></div>
     <div class="stat-card"><div class="stat-val">${s.hindu || 0}</div><div class="stat-lbl">${n2} WINS</div></div>
     <div class="stat-card"><div class="stat-val">${s.longestStreak || 0}</div><div class="stat-lbl">BEST STREAK</div></div>
-    <div class="stat-card"><div class="stat-val">${winRate}%</div><div class="stat-lbl">${n1} WIN RATE</div></div>
     <div class="stat-card"><div class="stat-val">${avgMoves}</div><div class="stat-lbl">AVG MOVES</div></div>
-    <div class="stat-card"><div class="stat-val">${favCell}</div><div class="stat-lbl">FAV CELL</div></div>
   `;
   // Recent games row
   const afterGrid = document.getElementById('stats-grid');
@@ -151,18 +144,7 @@ function showStatsModal() {
       `<div class="recent-games"><div class="recent-label">LAST ${s.recentGames.length} GAMES</div><div class="recent-dots">${dots}</div></div>`
     );
   }
-  // Cell heat map
-  const freq = s.cellFreq || Array(9).fill(0);
-  const maxF = Math.max(...freq, 1);
-  const heatCells = freq.map((f, idx) => {
-    const heat = f / maxF;
-    const bg = `rgba(var(--p1-rgb),${(heat * 0.72).toFixed(2)})`;
-    return `<div class="heat-cell" style="background:${bg}" title="Position ${idx+1}: ${f} play${f!==1?'s':''}">${f || ''}</div>`;
-  }).join('');
   const modal = document.getElementById('stats-modal');
-  modal.querySelector('.stats-actions').insertAdjacentHTML('beforebegin',
-    `<div class="heat-section"><div class="heat-title">CELL HOT SPOTS</div><div class="heat-grid">${heatCells}</div></div>`
-  );
   // Per-theme win rates
   const themeData = s.themes || {};
   const themeKeys = Object.keys(themeData).filter(k => THEMES[k]);
@@ -234,9 +216,6 @@ function checkAchievements(winner) {
   const tryUnlock = id => {
     if (!a[id]) unlockAchievement(ACHIEVEMENTS.find(x => x.id === id));
   };
-  // Time-based — fires for any outcome
-  const hr = new Date().getHours();
-  if (hr >= 22 || hr < 4) tryUnlock('night-owl');
 
   if (winner === 'draw') {
     tryUnlock('first-draw');
@@ -245,7 +224,7 @@ function checkAchievements(winner) {
     if (gameState.streaks[winner] >= 3) tryUnlock('triple-threat');
     if (aiMode === 'hard' && winner === EGYPT)  tryUnlock('ai-slayer');
     if (chaosMode)  tryUnlock('chaos-winner');
-    if (matchTarget >= 5 && gameState.scores[winner] >= Math.ceil(matchTarget / 2)) tryUnlock('match-master');
+    if (matchTarget === 3 && gameState.scores[winner] >= 2) tryUnlock('match-master');
     // Fastest possible win: 5 pieces total (3 for winner, 2 for loser)
     if (gameState.board.filter(v => v).length === 5) tryUnlock('speed-round');
     // Undisputed: win Best of 3 with opponent at 0 wins
@@ -256,10 +235,6 @@ function checkAchievements(winner) {
     if (gameState.streaks[winner] >= 5) tryUnlock('penta-streak');
     if (!hintUsedThisGame) tryUnlock('pure-intuition');
     if (chaosMode && activeChaosRules.length >= 3) tryUnlock('chaos-champ');
-    if (trailedInMatch && matchTarget >= 5 && gameState.scores[winner] >= Math.ceil(matchTarget / 2)) tryUnlock('comeback');
-    // Perfect game: all of the winner's moves were optimal
-    const winnerMoves = moveLog.filter(m => m.player === winner);
-    if (winnerMoves.length >= 3 && winnerMoves.every(m => m.quality === 'best')) tryUnlock('perfect-game');
   }
 }
 

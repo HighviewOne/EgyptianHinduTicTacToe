@@ -267,7 +267,7 @@ test('Custom player names are used in the turn label after reload', () => {
   expect(page.$('status').textContent).toMatch(/^Cleo's turn/);
 });
 
-test('Demo games and AI moves do not count in all-time stats', () => {
+test('Demo games do not count in all-time stats', () => {
   page = bootPage();
   page.clock.tick(INTRO_MS);
   page.setRandom(0.9);
@@ -277,13 +277,12 @@ test('Demo games and AI moves do not count in all-time stats', () => {
   page.clickCell(0);
   page.clock.tick(1000);                   // AI replies
   expect(page.pieces('hindu')).toBe(1);
-  expect(stats().cellFreq.reduce((a, b) => a + b, 0)).toBe(1);
 
   page.$('btn-spectator').click();
   page.clock.tick(30000);                  // several AI-vs-AI games
   expect(page.w.eval('gameState.scores.draws')).toBeGreaterThan(0);
   expect(stats().gamesPlayed).toBeUndefined();
-  expect(stats().cellFreq.reduce((a, b) => a + b, 0)).toBe(1);
+  expect(stats().cellFreq).toBeUndefined();   // the cell heatmap is no longer tracked
 });
 
 // ─── Round-scoped timers ──────────────────────────────────────────────────────
@@ -669,4 +668,51 @@ test('Moves & analysis is available mid-game and lists the moves', () => {
   expect(page.$('analysis-list').querySelectorAll('.analysis-entry').length).toBe(2);
   expect(page.$('btn-copy-moves')).not.toBeNull();
   for (const id of ['btn-log', 'move-log-panel', 'eval-bar']) expect(page.$(id)).toBeNull();
+});
+
+// ─── Trim step 3: look and progression ────────────────────────────────────────
+
+test('Only Free Play and Best of 3 remain; an old Best of 7 setting becomes Best of 3', () => {
+  page = bootPage({ storage: { 'ehttt': { key: 'egypt-hindu', match: 7 } } });
+  page.clock.tick(INTRO_MS);
+  const opts = [...page.w.document.querySelectorAll('.match-btn')].map(b => b.dataset.match);
+  expect(opts).toEqual(['0', '3']);
+  expect(page.w.eval('matchTarget')).toBe(3);
+  expect(page.w.document.querySelector('.match-btn.active').dataset.match).toBe('3');
+  expect(page.w.document.querySelector('.skin-row, .skin-btn')).toBeNull();
+});
+
+test('Stats panel drops the Player-1 win rate and the heatmap', () => {
+  page = bootPage({ storage: { 'ehttt-stats': { gamesPlayed: 4, egypt: 3, hindu: 1, draws: 0, longestStreak: 2,
+    recentGames: ['egypt', 'hindu', 'egypt', 'egypt'], cellFreq: [5, 0, 0, 0, 9, 0, 0, 0, 1] } } });
+  page.clock.tick(INTRO_MS);
+  page.$('btn-stats').click();
+  const text = page.$('stats-modal').textContent;
+  expect(text).not.toMatch(/WIN RATE|FAV CELL|HOT SPOTS/);
+  expect(text).toMatch(/BEST STREAK/);
+  expect(page.w.document.querySelectorAll('.recent-dot').length).toBe(4);
+});
+
+test('Achievements: 13 remain; earlier unlocks of removed ones are simply not counted', () => {
+  page = bootPage({ storage: { 'ehttt-ach': { 'night-owl': 1, 'comeback': 1, 'first-win': 1 } } });
+  page.clock.tick(INTRO_MS);
+  expect(page.w.eval('ACHIEVEMENTS.length')).toBe(13);
+  page.$('btn-achievements').click();
+  expect(page.$('achievements-count').textContent).toBe('1 / 13 Unlocked');
+});
+
+test('Match Master unlocks by winning a Best of 3', () => {
+  page = bootPage();
+  page.clock.tick(INTRO_MS);
+  page.setRandom(0.9);
+  page.w.document.querySelector('.match-btn[data-match="3"]').click();
+  for (let round = 0; round < 2; round++) {
+    page.clock.tick(INTRO_MS);
+    if (page.t.state.currentPlayer !== 'egypt') page.clickCell(8);   // India opens elsewhere
+    for (const [e, h] of [[0, 3], [1, 4]]) { page.clickCell(e); page.clickCell(h); }
+    page.clickCell(2);                       // Egypt completes the top row
+    expect(page.t.state.gameOver).toBe(true);
+    if (round === 0) page.$('btn-restart').click();
+  }
+  expect(JSON.parse(page.w.localStorage.getItem('ehttt-ach'))['match-master']).toBeTruthy();
 });

@@ -69,7 +69,7 @@ let lastPlacedCell = -1;   // index of most-recently placed piece (drives .fresh
 /* ─────────────────────────────────────────────
    Tournament / match state
 ───────────────────────────────────────────── */
-let matchTarget = 0;   // 0 = free play, 3/5/7 = best-of-N
+let matchTarget = 0;   // 0 = free play, 3 = best of 3
 
 /* ─────────────────────────────────────────────
    Move log (board snapshots for replay)
@@ -94,7 +94,6 @@ function cancelRoundTimers() {
   clearTimeout(hintTimer);
 }
 let hintUsedThisGame  = false;   // true once showHint() fires this round
-let trailedInMatch    = false;   // true once opponent had 2+ wins while player had 0
 let spectatorMode  = false;       // AI vs AI demo mode
 let _prevAiMode    = null;        // aiMode saved before spectator starts
 let spectatorDelay = 2800;        // ms between auto-rounds in demo mode
@@ -378,7 +377,6 @@ function saveSnapshot() {
     scores:        { ...gameState.scores },
     streaks:       { ...gameState.streaks },
     lastWinner:    gameState.lastWinner,
-    trailedInMatch,
     allTimeStats:  JSON.stringify(loadAllTimeStats()),
     moveLogLen:    moveLog.length,
     gameLogLen:    gameLog.length,
@@ -412,7 +410,6 @@ function undo() {
     gameState.scores     = { ...snap.scores };
     gameState.streaks    = { ...snap.streaks };
     gameState.lastWinner = snap.lastWinner;
-    trailedInMatch       = snap.trailedInMatch;
     saveAllTimeStats(JSON.parse(snap.allTimeStats));
     scoreEgypt.textContent = gameState.scores.egypt;
     scoreHindu.textContent = gameState.scores.hindu;
@@ -563,8 +560,6 @@ function handleClick(i, fromAI = false) {
   board[i] = currentPlayer;
   let actualI = i;
   lastPlacedCell = i;
-  // Track cell frequency for heatmap (human moves only)
-  if (_isHumanMove && !spectatorMode) { const st = loadAllTimeStats(); if (!st.cellFreq) st.cellFreq = Array(9).fill(0); st.cellFreq[i]++; saveAllTimeStats(st); }
 
   // ── CHAOS: Wild Turn (30 % chance once, after ≥ 2 pieces on board) ─
   if (chaosMode && chaosHas('wild-turn') && !chaosState.wildUsed && board.filter(v => v).length >= 2) {
@@ -737,13 +732,6 @@ function handleClick(i, fromAI = false) {
       const w = result.winner;
       sfxWin(w, currentThemeKey);
       vibrate([80, 40, 80]);
-      // Track trailing condition for Comeback King achievement
-      if (matchTarget >= 5) {
-        const loserCur = w === EGYPT ? HINDU : EGYPT;
-        if (gameState.scores[loserCur] >= 2 && gameState.scores[w] === 0) {
-          trailedInMatch = true;
-        }
-      }
       gameState.scores[w]++;
       const scoreEl = w === EGYPT ? scoreEgypt : scoreHindu;
       scoreEl.textContent = gameState.scores[w];
@@ -971,7 +959,6 @@ function resetScores() {
   gameState.scores     = { egypt: 0, hindu: 0, draws: 0 };
   gameState.streaks    = { egypt: 0, hindu: 0 };
   gameState.lastWinner = null;
-  trailedInMatch       = false;
   scoreEgypt.textContent = 0;
   scoreHindu.textContent = 0;
   drawsEl.textContent    = 0;
@@ -1008,7 +995,7 @@ function loadPrefs() {
     if (p.chaos)  { chaosMode     = true; document.getElementById('btn-chaos').classList.add('active'); }
     loadChaosConfig(p);
     if (p.match != null) {
-      matchTarget = p.match;
+      matchTarget = p.match ? 3 : 0;   // only Best of 3 remains (older saves may say 5 or 7)
       document.querySelectorAll('.match-btn').forEach(b => {
         b.classList.toggle('active', parseInt(b.dataset.match) === matchTarget);
       });
@@ -1196,16 +1183,6 @@ document.getElementById('btn-stats-close').addEventListener('click', () => {
 });
 document.getElementById('btn-stats-reset').addEventListener('click', resetAllTimeStats);
 
-// Board skin picker
-document.querySelectorAll('.skin-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.skin-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    const wrapper = boardEl.closest('.board-wrapper');
-    wrapper.className = 'board-wrapper' + (btn.dataset.skin ? ' ' + btn.dataset.skin : '');
-  });
-});
-
 // Lore encyclopedia
 function showLoreModal() {
   const facts = currentTheme.loreFacts || [];
@@ -1380,7 +1357,7 @@ function syncPressed(btn) {
   btn.setAttribute('aria-pressed', String(btn.classList.contains('active') || btn.classList.contains('on')));
 }
 const _pressedObserver = new MutationObserver(ms => ms.forEach(m => syncPressed(m.target)));
-document.querySelectorAll('.mode-btn, .match-btn, .theme-btn, .skin-btn, .fun-btn:not(#btn-install):not(#btn-more), #btn-spectator')
+document.querySelectorAll('.mode-btn, .match-btn, .theme-btn, .fun-btn:not(#btn-install):not(#btn-more), #btn-spectator')
   .forEach(btn => {
     syncPressed(btn);
     _pressedObserver.observe(btn, { attributes: true, attributeFilter: ['class'] });
