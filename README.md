@@ -7,7 +7,7 @@
 
 [![CI](https://github.com/HighviewOne/EgyptianHinduTicTacToe/actions/workflows/ci.yml/badge.svg)](https://github.com/HighviewOne/EgyptianHinduTicTacToe/actions/workflows/ci.yml)
 [![Deploy](https://github.com/HighviewOne/EgyptianHinduTicTacToe/actions/workflows/pages.yml/badge.svg)](https://github.com/HighviewOne/EgyptianHinduTicTacToe/actions/workflows/pages.yml)
-[![Tests](https://img.shields.io/badge/Tests-81%20passing-brightgreen?style=flat-square)](game.dom.test.js)
+[![Tests](https://img.shields.io/badge/Tests-85%20passing-brightgreen?style=flat-square)](game.dom.test.js)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
 
 ![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat-square&logo=html5&logoColor=white)
@@ -15,7 +15,7 @@
 ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat-square&logo=javascript&logoColor=black)
 ![PWA](https://img.shields.io/badge/PWA-5A0FC8?style=flat-square&logo=pwa&logoColor=white)
 
-A fully-featured browser Tic-Tac-Toe game with **cinematic cultural themes**, a **strategic minimax AI**, **9 Chaos rules**, **procedural Web Audio music**, **16 achievements**, and a full progression system — built in vanilla HTML / CSS / JS with zero dependencies.
+A fully-featured browser Tic-Tac-Toe game with **cinematic cultural themes**, a **strategic minimax AI**, **9 Chaos rules**, **procedural Web Audio music**, **13 achievements**, and a full progression system — built in vanilla HTML / CSS / JS with zero dependencies.
 
 **[▶ Play Live](https://highviewone.github.io/EgyptianHinduTicTacToe/)** · Installable PWA · Works offline
 
@@ -31,7 +31,6 @@ A fully-featured browser Tic-Tac-Toe game with **cinematic cultural themes**, a 
 - [Game Modes](#game-modes)
 - [Chaos Mode](#-chaos-mode)
 - [Fun Modes](#fun-modes)
-- [Board Skins](#board-skins)
 - [Tournament Mode](#tournament-mode)
 - [Achievements](#achievements)
 - [All-Time Stats](#all-time-stats)
@@ -136,27 +135,15 @@ Toggle Chaos mode to activate 1–3 randomly chosen rules each round. Active rul
 
 ---
 
-## Board Skins
-
-Three visual styles selectable via 🪨 🏛 ⚡ buttons between the board and controls:
-
-| Skin | Look |
-|---|---|
-| 🪨 Stone | Default dark parchment |
-| 🏛 Marble | Warm cream cell backgrounds with earthy borders |
-| ⚡ Neon | Deep black with glowing piece halos in theme colors |
-
----
-
 ## Tournament Mode
 
-Select **Best of 3 / 5 / 7** from the Match row. Pip indicators on each player card fill as they win rounds. A full-screen match victory overlay fires when a player reaches the winning threshold. Preference persists across reloads.
+Select **Best of 3** from the Match row (or Free Play). Pip indicators on each player card fill as they win rounds. A full-screen match victory overlay fires when a player reaches the winning threshold. Preference persists across reloads.
 
 ---
 
 ## Achievements
 
-16 unlockable achievements stored in `localStorage`. A slide-in toast confirms each unlock; multiple unlocks queue gracefully. Achievements are earned by human players only — never in AI Demo mode or when the AI wins.
+13 unlockable achievements stored in `localStorage`. A slide-in toast confirms each unlock; multiple unlocks queue gracefully. Achievements are earned by human players only — never in AI Demo mode or when the AI wins.
 
 | Achievement | Condition |
 |---|---|
@@ -167,15 +154,12 @@ Select **Best of 3 / 5 / 7** from the Match row. Pip indicators on each player c
 | 🤖 Machine Breaker | Defeat the Hard AI |
 | ⚡ Lord of Chaos | Win a round with Chaos mode on |
 | 🌪 Chaos Champion | Win with all 3 chaos rules active simultaneously |
-| 🏆 Match Master | Win a Best of 5 or 7 match |
+| 🏆 Match Master | Win a Best of 3 match |
 | 👑 Undisputed | Win a Best of 3 without dropping a round |
-| 🔄 Comeback King | Win a match after trailing 0–2+ in a Bo5+ |
 | 🌍 Pilgrim of Ages | Play all 5 named themes |
 | 🐉 Dragon Lord | Win a game with the Dragon vs Phoenix theme |
 | 💨 Lightning Strike | Win in the minimum 5 moves |
-| 🌙 Night Owl | Play between 22:00 and 04:00 |
 | 🎯 Pure Intuition | Win a game without ever using the Hint button |
-| ⭐ Perfect Execution | Win a game making only optimal moves |
 
 ---
 
@@ -184,9 +168,8 @@ Select **Best of 3 / 5 / 7** from the Match row. Pip indicators on each player c
 The 📊 Stats button opens a modal showing:
 - Cumulative games played, draws, per-player wins
 - Best win streak
-- Player-1 win rate
 - Last 10 games as colored result dots
-- **Cell hot-spots heatmap**: 3×3 grid showing which cells human players pick most often (persisted across sessions)
+- Average moves per game and win rate by theme
 
 AI Demo games are not counted.
 

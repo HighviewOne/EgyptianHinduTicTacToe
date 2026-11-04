@@ -371,18 +371,15 @@ const ACHIEVEMENTS = [
   { id: 'triple-threat', icon: '🔥',  name: 'On Fire',         desc: 'Win 3 games in a row' },
   { id: 'ai-slayer',     icon: '🤖',  name: 'Machine Breaker', desc: 'Defeat the Hard AI' },
   { id: 'chaos-winner',  icon: '⚡',  name: 'Lord of Chaos',   desc: 'Win with Chaos mode on' },
-  { id: 'match-master',  icon: '🏆',  name: 'Match Master',    desc: 'Win a Best of 5 or 7 match' },
+  { id: 'match-master',  icon: '🏆',  name: 'Match Master',    desc: 'Win a Best of 3 match' },
   { id: 'all-themes',    icon: '🌍',  name: 'Pilgrim of Ages',   desc: 'Play all 5 named themes' },
   { id: 'first-draw',   icon: '⚖️', name: 'Equilibrium',       desc: 'Play to a draw' },
   { id: 'speed-round',  icon: '💨',  name: 'Lightning Strike',  desc: 'Win in the minimum 5 moves' },
-  { id: 'night-owl',    icon: '🌙',  name: 'Night Owl',         desc: 'Play between 22:00 and 04:00' },
   { id: 'undisputed',   icon: '👑',  name: 'Undisputed',        desc: 'Win a Best of 3 without dropping a round' },
   { id: 'dragon-lord',  icon: '🐉',  name: 'Dragon Lord',       desc: 'Win a game with the Dragon vs Phoenix theme' },
   { id: 'penta-streak', icon: '🔥',  name: 'Unstoppable',       desc: 'Win 5 games in a row' },
   { id: 'pure-intuition',icon:'🎯',  name: 'Pure Intuition',    desc: 'Win a game without ever using the Hint button' },
   { id: 'chaos-champ',  icon: '🌪',  name: 'Chaos Champion',    desc: 'Win a round with all 3 chaos rules active' },
-  { id: 'comeback',     icon: '🔄',  name: 'Comeback King',     desc: 'Win a match after trailing 0 wins to your opponent\'s 2+' },
-  { id: 'perfect-game',icon: '⭐',  name: 'Perfect Execution', desc: 'Win a game making only optimal moves' },
 ];
 
 /* ── Did You Know tips ── */
@@ -401,7 +398,7 @@ const DID_YOU_KNOW = [
   "💡 You can rename the players — just click their name on the player card.",
   "💡 ⋯ More → 🔍 Moves & analysis shows every move and the best alternative.",
   "💡 Streak badges appear when a player wins 3+ games in a row.",
-  "💡 Check 📊 Stats for your all-time record, cell heatmap, and theme win rates.",
+  "💡 Check 📊 Stats for your all-time record, best streak, and theme win rates.",
   "💡 Arrow keys navigate the board; Enter or Space places your piece.",
   "💡 The game is installable as a PWA — look for the ⬇ Install button!",
 ];
