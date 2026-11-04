@@ -7,7 +7,7 @@
 
 [![CI](https://github.com/HighviewOne/EgyptianHinduTicTacToe/actions/workflows/ci.yml/badge.svg)](https://github.com/HighviewOne/EgyptianHinduTicTacToe/actions/workflows/ci.yml)
 [![Deploy](https://github.com/HighviewOne/EgyptianHinduTicTacToe/actions/workflows/pages.yml/badge.svg)](https://github.com/HighviewOne/EgyptianHinduTicTacToe/actions/workflows/pages.yml)
-[![Tests](https://img.shields.io/badge/Tests-85%20passing-brightgreen?style=flat-square)](game.dom.test.js)
+[![Tests](https://img.shields.io/badge/Tests-87%20passing-brightgreen?style=flat-square)](game.dom.test.js)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
 
 ![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat-square&logo=html5&logoColor=white)
@@ -87,7 +87,7 @@ Five named themes plus a ✦ **Random** mode that procedurally generates a new p
 Each theme ships with:
 - Unique placement sounds (Web Audio API, no files)
 - Modal-scale procedural background music + LFO drone
-- 5 lore facts (📖 Lore button) and per-player quips
+- 5 lore facts (📖 Lore button, and one on every win screen) and per-player quips
 - 3 randomised win messages per player
 
 ---
@@ -101,6 +101,8 @@ Each theme ships with:
 | vs AI — Medium | Always takes a winning move and blocks yours; otherwise 35 % random, else minimax. Beatable with forks |
 | vs AI — Hard | Full minimax + alpha-beta pruning (unbeatable); takes immediate wins |
 | 👁 AI Demo | AI vs AI — watch Hard play itself, auto-restarts. Demo games don't count toward stats or achievements |
+
+New players start in **vs AI — Easy**, so a child playing alone can begin right away; after that the game remembers your choice.
 
 **Undo** (`U`, ↩ button, or swipe left on the board) works mid-game and right after a game ends — undoing a finished game also takes back its score and stats (achievements already earned stay).
 
@@ -235,7 +237,7 @@ ai.js               minimax (depth-aware, alpha-beta pruning) + mode management
 chaos.js            Chaos mode: rule state, picking/config, rules bar, overlay
 stats.js            all-time stats, ranks, achievements, moves & analysis
 board.js            board drawing: cells, grid/win lines, seal, hint, replay
-themes.js           apply/generate themes, intro, lore popup, papyrus ornaments
+themes.js           apply/generate themes, intro, papyrus ornaments
 script.js           game state, move handling (handleClick), rounds, undo,
                     save/restore, prefs, keyboard/touch input, startup
 eslint.config.js    lint config (all game files share one global scope)

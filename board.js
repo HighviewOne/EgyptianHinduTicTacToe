@@ -210,6 +210,13 @@ function showWinSeal(winner) {
   if (lineEl)   lineEl.textContent = isDraw ? 'Both armies retreat with honor intact.' : (p.winLine || (p.winMsgs ? p.winMsgs[0].replace(/^🏆\s*/,'') : ''));
   if (cardEl)   cardEl.style.borderColor = ink;
   if (btnEl)    { btnEl.style.borderColor = ink; btnEl.style.color = ink; }
+  // One lore fact from the current theme, so the culture shows up where kids look
+  const loreEl = document.getElementById('win-seal-lore');
+  const facts  = currentTheme.loreFacts || [];
+  if (loreEl) loreEl.textContent = facts.length ? `📜 ${facts[Math.floor(Math.random() * facts.length)]}` : '';
+  // Clear any game message (Match Point!, Top Row!…) so it doesn't sit on top of the card
+  const msgEl = document.getElementById('chaos-event');
+  if (msgEl) msgEl.classList.remove('visible');
   seal.classList.add('visible');
 }
 

@@ -54,20 +54,6 @@ function showIntro() {
 }
 
 /* ─────────────────────────────────────────────
-   Lore popup (1-in-20 chance after a game)
-───────────────────────────────────────────── */
-function checkLorePopup() {
-  if (Math.random() > 0.15) return;
-  const facts = currentTheme.loreFacts;
-  if (!facts || !facts.length) return;
-  const toast = document.getElementById('lore-toast');
-  document.getElementById('lore-toast-text').textContent =
-    facts[Math.floor(Math.random() * facts.length)];
-  toast.classList.add('visible');
-  setTimeout(() => toast.classList.remove('visible'), 5800);
-}
-
-/* ─────────────────────────────────────────────
    Procedural theme generator
 ───────────────────────────────────────────── */
 function hslToHex(h, s, l) {

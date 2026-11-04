@@ -896,6 +896,20 @@ header { width: 100%; max-width: 1240px; }
   padding: 0 12px;
 }
 
+.win-seal-lore {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: .82rem;
+  color: var(--ink);
+  opacity: 0.7;
+  max-width: 340px;
+  margin: -14px auto 22px;
+  line-height: 1.5;
+  padding: 10px 12px 0;
+  border-top: 1px dotted rgba(40,20,0,0.25);
+}
+.win-seal-lore:empty { display: none; }
+
 .win-seal-btn {
   font-family: 'IM Fell DW Pica SC', serif;
   font-size: 0.78rem;
@@ -1293,27 +1307,6 @@ header { width: 100%; max-width: 1240px; }
 .intro-skip {
   font-size: .52rem; letter-spacing: .25em;
   opacity: .18; text-transform: uppercase; color: #fff;
-}
-
-/* ── Lore toast ── */
-.lore-toast {
-  position: fixed; bottom: 24px; left: 50%;
-  transform: translateX(-50%) translateY(14px);
-  background: rgba(235,220,180,.97);
-  border: 1px solid rgba(40,20,0,.22);
-  border-radius: 2px; padding: 13px 18px;
-  max-width: min(440px, calc(100vw - 32px));
-  display: flex; gap: 12px; align-items: flex-start;
-  opacity: 0; transition: opacity .45s, transform .45s;
-  z-index: 150; pointer-events: none;
-  box-shadow: 0 6px 28px rgba(0,0,0,.25);
-}
-.lore-toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
-.lore-toast-icon { font-size: 1.25rem; flex-shrink: 0; margin-top: 1px; }
-.lore-toast-text {
-  font-family: 'Cormorant Garamond', serif; font-style: italic;
-  font-size: .72rem; letter-spacing: .05em;
-  line-height: 1.65; color: var(--ink);
 }
 
 /* ── Chaos bar ── */
